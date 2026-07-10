@@ -150,6 +150,25 @@ function ensureDeferredUi() {
   log.id = "log";
   uiContainer.appendChild(log);
   logElement = log;
+
+  // Download button - always visible
+  const dlBtn = document.createElement("button");
+  dlBtn.textContent = "Download Full Log";
+  dlBtn.id = "dl-btn";
+  dlBtn.style.cssText = "position:fixed;top:8px;right:8px;z-index:9999;padding:8px 16px;font-size:14px;background:#1a73e8;color:#fff;border:none;border-radius:4px;display:none;";
+  dlBtn.addEventListener("click", function() {
+    const logData = localStorage.getItem("ionstack_log") || "(empty)";
+    const blob = new Blob([logData], {type: "text/plain"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ionstack-log-" + Date.now() + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+  });
+  document.body.appendChild(dlBtn);
 }
 
 function renderDeferredUi(lines, finalMessage, emitLogs) {
@@ -334,7 +353,14 @@ addEventListener("message", (event) => {
   }
   if (data.type === "progress") {
     clearTimeout(timer);
-    renderDeferredUi(Array.isArray(data.lines) ? data.lines : [], data.finalMessage || "", false);
+    const lines = Array.isArray(data.lines) ? data.lines : [];
+    renderDeferredUi(lines, data.finalMessage || "", false);
+    // Accumulate log in localStorage
+    try {
+      localStorage.setItem("ionstack_log", lines.join("\n"));
+      const btn = document.getElementById("dl-btn");
+      if (btn) btn.style.display = "block";
+    } catch(e) {}
     return;
   }
   if (data.type !== "success") {
@@ -343,7 +369,17 @@ addEventListener("message", (event) => {
   done = true;
   clearTimeout(timer);
   cleanupFrames();
-  installDeferredUi(Array.isArray(data.lines) ? data.lines : [], data.finalMessage || "");
+  const sLines = Array.isArray(data.lines) ? data.lines : [];
+  installDeferredUi(sLines, data.finalMessage || "");
+  // Save final log + show download button
+  try {
+    localStorage.setItem("ionstack_log", sLines.join("\n"));
+    const btn = document.getElementById("dl-btn");
+    if (btn) {
+      btn.style.display = "block";
+      btn.textContent = "Download Full Log (done)";
+    }
+  } catch(e) {}
   alert("Done. Please manually verify the result.");
 });
 
