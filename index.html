@@ -40,6 +40,9 @@ let logElement = null;
 let ansiScriptRequested = false;
 let lastLiveText = "";
 let lastLogText = "";
+let accumulatedLogText = "";
+const LOG_STORAGE_KEY = "ionstack_log";
+const LOG_BACKUP_KEY = "ionstack_log_backup";
 const frames = [];
 
 function childUrl(n) {
@@ -60,6 +63,66 @@ function emitLine(line) {
     }
   } catch (e) {}
 }
+
+
+function sanitizeLogText(value) {
+  return String(value || "").replace(/\0/g, "");
+}
+
+function persistLogText(text) {
+  const clean = sanitizeLogText(text);
+  if (!clean.trim()) {
+    return;
+  }
+  accumulatedLogText = clean;
+  try {
+    localStorage.setItem(LOG_STORAGE_KEY, clean);
+    localStorage.setItem(LOG_BACKUP_KEY, clean);
+  } catch (e) {}
+  const btn = document.getElementById("dl-btn");
+  if (btn) {
+    btn.style.display = "block";
+    btn.disabled = false;
+  }
+}
+
+function currentLogText() {
+  const candidates = [
+    accumulatedLogText,
+    lastLogText,
+    logElement ? logElement.textContent : "",
+    localStorage.getItem(LOG_STORAGE_KEY),
+    localStorage.getItem(LOG_BACKUP_KEY),
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    const clean = sanitizeLogText(candidates[i]);
+    if (clean.trim()) {
+      return clean;
+    }
+  }
+  return "";
+}
+
+function downloadFullLog() {
+  const logData = currentLogText();
+  if (!logData) {
+    alert("No captured log yet. Keep this page open and wait for progress, or rerun the exploit.");
+    return;
+  }
+  const blob = new Blob([logData], {type: "text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ionstack-log-" + Date.now() + ".txt";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() {
+    try { document.body.removeChild(a); } catch (e) {}
+    URL.revokeObjectURL(url);
+  }, 30000);
+}
+
 
 function requestAnsiRenderer() {
   if (ansiScriptRequested) {
@@ -156,18 +219,7 @@ function ensureDeferredUi() {
   dlBtn.textContent = "Download Full Log";
   dlBtn.id = "dl-btn";
   dlBtn.style.cssText = "position:fixed;top:8px;right:8px;z-index:9999;padding:8px 16px;font-size:14px;background:#1a73e8;color:#fff;border:none;border-radius:4px;display:none;";
-  dlBtn.addEventListener("click", function() {
-    const logData = localStorage.getItem("ionstack_log") || "(empty)";
-    const blob = new Blob([logData], {type: "text/plain"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ionstack-log-" + Date.now() + ".txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-  });
+  dlBtn.addEventListener("click", downloadFullLog);
   document.body.appendChild(dlBtn);
 }
 
@@ -191,7 +243,8 @@ function renderDeferredUi(lines, finalMessage, emitLogs) {
     document.title = allLines[i];
   }
   lastLiveText = liveText;
-  lastLogText = logLines.join("\n");
+  lastLogText = sanitizeLogText(logLines.join("\n"));
+  persistLogText(lastLogText);
   renderText(liveElement, lastLiveText);
   renderText(logElement, lastLogText);
   scrollToLastLine();
@@ -355,12 +408,7 @@ addEventListener("message", (event) => {
     clearTimeout(timer);
     const lines = Array.isArray(data.lines) ? data.lines : [];
     renderDeferredUi(lines, data.finalMessage || "", false);
-    // Accumulate log in localStorage
-    try {
-      localStorage.setItem("ionstack_log", lines.join("\n"));
-      const btn = document.getElementById("dl-btn");
-      if (btn) btn.style.display = "block";
-    } catch(e) {}
+    persistLogText(lines.concat(data.finalMessage ? [data.finalMessage] : []).join("\n"));
     return;
   }
   if (data.type !== "success") {
@@ -371,15 +419,12 @@ addEventListener("message", (event) => {
   cleanupFrames();
   const sLines = Array.isArray(data.lines) ? data.lines : [];
   installDeferredUi(sLines, data.finalMessage || "");
-  // Save final log + show download button
-  try {
-    localStorage.setItem("ionstack_log", sLines.join("\n"));
-    const btn = document.getElementById("dl-btn");
-    if (btn) {
-      btn.style.display = "block";
-      btn.textContent = "Download Full Log (done)";
-    }
-  } catch(e) {}
+  persistLogText(sLines.concat(data.finalMessage ? [data.finalMessage] : []).join("\n"));
+  const btn = document.getElementById("dl-btn");
+  if (btn) {
+    btn.style.display = "block";
+    btn.textContent = "Download Full Log (done)";
+  }
   alert("Done. Please manually verify the result.");
 });
 
