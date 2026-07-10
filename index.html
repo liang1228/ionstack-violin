@@ -242,8 +242,13 @@ function renderDeferredUi(lines, finalMessage, emitLogs) {
     logLines.push(allLines[i]);
     document.title = allLines[i];
   }
-  lastLiveText = liveText;
-  lastLogText = sanitizeLogText(logLines.join("\n"));
+  const nextLiveText = liveText;
+  const nextLogText = sanitizeLogText(logLines.join("\n"));
+  if (nextLiveText === lastLiveText && nextLogText === lastLogText) {
+    return;
+  }
+  lastLiveText = nextLiveText;
+  lastLogText = nextLogText;
   persistLogText(lastLogText);
   renderText(liveElement, lastLiveText);
   renderText(logElement, lastLogText);
@@ -290,6 +295,10 @@ function removeFrameForWindow(source) {
 }
 
 function releasePage() {
+  if (confirmed && !done) {
+    persistLogText(currentLogText());
+    return;
+  }
   if (released) {
     return;
   }
@@ -314,8 +323,16 @@ function releasePage() {
 }
 
 function releaseWhenHidden() {
-  if (document.hidden) {
+  if (document.hidden && !confirmed) {
     releasePage();
+  }
+}
+
+function releaseWhenPageHides() {
+  if (!confirmed) {
+    releasePage();
+  } else {
+    persistLogText(currentLogText());
   }
 }
 
@@ -408,7 +425,6 @@ addEventListener("message", (event) => {
     clearTimeout(timer);
     const lines = Array.isArray(data.lines) ? data.lines : [];
     renderDeferredUi(lines, data.finalMessage || "", false);
-    persistLogText(lines.concat(data.finalMessage ? [data.finalMessage] : []).join("\n"));
     return;
   }
   if (data.type !== "success") {
@@ -429,7 +445,7 @@ addEventListener("message", (event) => {
 });
 
 addEventListener("visibilitychange", releaseWhenHidden);
-addEventListener("pagehide", releasePage);
+addEventListener("pagehide", releaseWhenPageHides);
 keepScreenAwake();
 startAttempt();
 </script>
