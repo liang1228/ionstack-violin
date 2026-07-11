@@ -50,9 +50,11 @@ const frames = [];
 function childUrl(n) {
   const dir = location.pathname.replace(/[^/]*$/, "");
   let url = dir + "exploit.html?run=" + encodeURIComponent(RUN_ID) + "&attempt=" + n;
-  const requestedPayload = queryParams.get("payload");
-  if (requestedPayload) {
-    url += "&payload=" + encodeURIComponent(requestedPayload);
+  for (const name of ["payload", "diag"]) {
+    const value = queryParams.get(name);
+    if (value) {
+      url += "&" + name + "=" + encodeURIComponent(value);
+    }
   }
   return url + "#" + (location.hash ? location.hash.slice(1) : "4,15,");
 }
