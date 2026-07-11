@@ -43,11 +43,17 @@ let lastLogText = "";
 let accumulatedLogText = "";
 const LOG_STORAGE_KEY = "ionstack_log";
 const LOG_BACKUP_KEY = "ionstack_log_backup";
+const LOG_SESSION_KEY = "ionstack_log_" + RUN_ID;
+const LOG_META_KEY = "ionstack_log_meta";
 const frames = [];
 
 function childUrl(n) {
   const dir = location.pathname.replace(/[^/]*$/, "");
   let url = dir + "exploit.html?run=" + encodeURIComponent(RUN_ID) + "&attempt=" + n;
+  const requestedPayload = queryParams.get("payload");
+  if (requestedPayload) {
+    url += "&payload=" + encodeURIComponent(requestedPayload);
+  }
   return url + "#" + (location.hash ? location.hash.slice(1) : "4,15,");
 }
 
@@ -78,6 +84,13 @@ function persistLogText(text) {
   try {
     localStorage.setItem(LOG_STORAGE_KEY, clean);
     localStorage.setItem(LOG_BACKUP_KEY, clean);
+    localStorage.setItem(LOG_SESSION_KEY, clean);
+    localStorage.setItem(LOG_META_KEY, JSON.stringify({
+      run: RUN_ID,
+      payload: queryParams.get("payload") || "stable0",
+      updatedAt: new Date().toISOString(),
+      bytes: clean.length,
+    }));
   } catch (e) {}
   const btn = document.getElementById("dl-btn");
   if (btn) {
@@ -121,6 +134,36 @@ function downloadFullLog() {
     try { document.body.removeChild(a); } catch (e) {}
     URL.revokeObjectURL(url);
   }, 30000);
+}
+
+function restorePersistedLog() {
+  let saved = "";
+  let meta = null;
+  try {
+    saved = sanitizeLogText(
+      localStorage.getItem(LOG_STORAGE_KEY) ||
+      localStorage.getItem(LOG_BACKUP_KEY) || ""
+    );
+    meta = JSON.parse(localStorage.getItem(LOG_META_KEY) || "null");
+  } catch (e) {}
+  if (!saved.trim()) {
+    return;
+  }
+  accumulatedLogText = saved;
+  lastLogText = saved;
+  ensureDeferredUi();
+  renderText(logElement, saved);
+  const btn = document.getElementById("dl-btn");
+  if (btn) {
+    btn.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Download Saved Log";
+  }
+  if (meta && liveElement) {
+    liveElement.textContent = "Recovered saved log: " +
+      (meta.updatedAt || "unknown time") + " | payload=" +
+      (meta.payload || "unknown") + " | bytes=" + (meta.bytes || saved.length);
+  }
 }
 
 
@@ -447,5 +490,6 @@ addEventListener("message", (event) => {
 addEventListener("visibilitychange", releaseWhenHidden);
 addEventListener("pagehide", releaseWhenPageHides);
 keepScreenAwake();
+restorePersistedLog();
 startAttempt();
 </script>
