@@ -1,4 +1,4 @@
-+#!/system/bin/sh
+#!/system/bin/sh
 # Start a rooted same-build E24 reproduction while preserving live kernel logs.
 # The device may reboot. After it boots, run collect-rooted-panic-evidence.sh
 # from this same directory and send both the live log and the archive.
