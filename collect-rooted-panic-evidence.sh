@@ -1,4 +1,4 @@
-+#!/system/bin/sh
+#!/system/bin/sh
 # IonStack / CVE-2026-43499 post-reboot evidence collector.
 # Run this AFTER the rooted same-build device has rebooted from a reproduction.
 # All output is created beside this script.
