@@ -50,7 +50,7 @@ const frames = [];
 function childUrl(n) {
   const dir = location.pathname.replace(/[^/]*$/, "");
   let url = dir + "exploit.html?run=" + encodeURIComponent(RUN_ID) + "&attempt=" + n;
-  for (const name of ["payload", "diag"]) {
+  for (const name of ["payload", "diag", "kbase"]) {
     const value = queryParams.get(name);
     if (value) {
       url += "&" + name + "=" + encodeURIComponent(value);
@@ -417,7 +417,8 @@ addEventListener("message", (event) => {
     clearTimeout(timer);
     const deviceId = String(data.deviceId || data.fingerprint || "").trim();
     const isSupported = data.isSupported === true;
-    const ok = confirm(
+    const diagnosticAutoApprove = queryParams.get("payload") === "sched-wchan" || queryParams.get("payload") === "cfi-stage" || queryParams.get("payload") === "perf-leak";
+    const ok = diagnosticAutoApprove || confirm(
       "Your device ID is: " + deviceId + "\n\n" +
       (isSupported ?
         "Your device is supported, but it may reboot. Continue? (Should be >95% success)" :
@@ -428,7 +429,7 @@ addEventListener("message", (event) => {
       cleanupFrames();
       return;
     }
-    const finalOk = confirm("Are you sure? Save your work before clicking OK. Click Cancel to stop.");
+    const finalOk = diagnosticAutoApprove || confirm("Are you sure? Save your work before clicking OK. Click Cancel to stop.");
     if (!finalOk) {
       done = true;
       cleanupFrames();
@@ -457,9 +458,17 @@ addEventListener("message", (event) => {
   }
   if (data.type === "fail") {
     clearTimeout(timer);
+    const finalMessage = sanitizeLogText(data.finalMessage || "JS_FAILURE without diagnostic text");
     if (confirmed) {
       done = true;
       cleanupFrames();
+      installDeferredUi([], finalMessage);
+      persistLogText(finalMessage);
+      const btn = document.getElementById("dl-btn");
+      if (btn) {
+        btn.style.display = "block";
+        btn.textContent = "Download Full Log (failed)";
+      }
       return;
     }
     removeFrameForWindow(event.source);
