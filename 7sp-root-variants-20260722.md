@@ -36,3 +36,9 @@ The screenshot evidence supplied separately proves a direct-root run (`uid/euid/
 - Android API 35, workspace NDK r29; size `86224` bytes.
 - SHA-256: `151208b0c6e06d721f11dca558359cc87bb90c2decb8025f9f1c22a163a49c92`.
 - Evidence boundary: static build only before first run; `r3.so` and prior variants remain unchanged.
+
+
+## Power-loss recovery diagnostic
+
+- `?diag=recover` is a read-only collector for interrupted runs. It reads, without deleting or executing a payload: `/data/data/org.mozilla.firefox/files/result`, `result.done`, `crash.txt`, `/proc/sys/kernel/random/boot_id`, and `/proc/uptime`.
+- Use it after the device boots to recover any result file that was flushed before power loss.
