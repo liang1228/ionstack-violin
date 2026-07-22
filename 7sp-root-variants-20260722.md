@@ -25,3 +25,14 @@ The screenshot evidence supplied separately proves a direct-root run (`uid/euid/
 - Size: `89264` bytes.
 - SHA-256: `657bdb47745c59cb8157ad7afbf2dd7b8f7b34487040406764e1a0b9c33f6744`.
 - Evidence boundary: build/static only; no device run or root proof yet. `r.so` and `r2.so` remain unchanged.
+
+## Challenge-gate test candidate: `r4.so`
+
+- `?payload=r4` -> `r4.so`
+- Purpose: retain the r3 CPU-affinity fix while compiling out only the source-level Challenge Gate for the Violin browser test; no KASLR/PI/fops/pipe/cred logic was changed.
+- Trigger: r3 loaded correctly but stopped at `[Signature] Enter value:` because the page command does not provide stdin.
+- Build macro: `IONSTACK_SKIP_CHALLENGE_GATE=1`.
+- Runtime marker: `[Challenge] disabled_for_violin_test` before `preload starting`.
+- Android API 35, workspace NDK r29; size `86224` bytes.
+- SHA-256: `151208b0c6e06d721f11dca558359cc87bb90c2decb8025f9f1c22a163a49c92`.
+- Evidence boundary: static build only before first run; `r3.so` and prior variants remain unchanged.
