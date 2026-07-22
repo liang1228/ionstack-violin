@@ -15,3 +15,13 @@ SHA-256 and sizes:
 | `r2.so` | 86664 | `f4ddca29b1b86c6d119ecdf1d10b4337842739479c50e4c2e19d39808631af76` |
 
 The screenshot evidence supplied separately proves a direct-root run (`uid/euid/gid/egid=0`, `got_root=1`, `whoami=root`), but does not identify which binary or provide the matching boot/source manifest. Treat the query variants as separate candidates and preserve the complete output log for each run.
+
+## CPU-affinity fix candidate: `r3.so`
+
+- `?payload=r3` -> `r3.so`
+- Purpose: preserve `r.so` and avoid the Violin app-cpuset failure observed when the runtime selected CPU 9 but the old build pinned `CORE=0`.
+- Build source: external Linuxoid snapshot plus runtime CPU selection fix; target config bound to the current Violin target header.
+- Build: Android API 35, workspace NDK r29.
+- Size: `89264` bytes.
+- SHA-256: `657bdb47745c59cb8157ad7afbf2dd7b8f7b34487040406764e1a0b9c33f6744`.
+- Evidence boundary: build/static only; no device run or root proof yet. `r.so` and `r2.so` remain unchanged.
