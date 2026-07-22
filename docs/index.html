@@ -29,10 +29,10 @@ let logElement = null;
 let statusElement = null;
 
 const PAYLOADS = {
-  "r3": { name: "r3.so — permissive + root", file: "r3.so", desc: "SELinux permissive + uid=0" },
-  "r4": { name: "r4.so — direct write", file: "r4.so", desc: "Direct pselect write path" },
+  "r":  { name: "r.so — Root", file: "r.so", desc: "uid=0 + Permissive (dijun, verified)" },
   "p":  { name: "p.so — permissive only", file: "p.so", desc: "SELinux permissive (no root)" },
-  "r2": { name: "r2.so — root v2", file: "r2.so", desc: "Root with cred replace" },
+  "r2": { name: "r2.so — Root v2", file: "r2.so", desc: "Root optimized (dijun, verified)" },
+  "preload": { name: "preload.so — Our build", file: "preload.so", desc: "Safe CPU + direct cred replace" },
 };
 
 function childUrl(n) {
