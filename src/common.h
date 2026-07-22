@@ -498,4 +498,7 @@ int install_android_root(int fd);
 int install_kernelsu_late_load(void);
 int direct_cred_replace(void);
 
+struct xbl_profile;
+int xbl_config_find_profile(struct xbl_profile *out);
+
 #endif
