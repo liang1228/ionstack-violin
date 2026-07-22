@@ -1,0 +1,130 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IonStack Violin — r.so (Root)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b0f;font-family:'Courier New',monospace;color:#c9d1d9}
+.wrap{max-width:600px;margin:0 auto;padding:clamp(16px,5vw,32px)}
+h1{color:#3fb950;font-size:1.6rem;margin-bottom:.5rem}
+.sub{color:#8b949e;margin-bottom:1.5rem;font-size:.9rem}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:1.2rem;margin-bottom:1rem}
+.card h2{font-size:1rem;margin-bottom:.8rem;color:#e6edf3}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid #21262d}
+th{color:#8b949e;font-weight:600;font-size:.75rem;text-transform:uppercase}
+.badge{display:inline-block;padding:.15em .5em;border-radius:4px;font-size:.75rem;font-weight:600}
+.b-green{background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.3)}
+.status{color:#58a6ff;font-size:.9rem;margin:1rem 0;min-height:1.5em}
+.log{color:#8b949e;font-size:.8rem;white-space:pre-wrap;max-height:40vh;overflow-y:auto;padding:.8rem;background:#0d1117;border:1px solid #21262d;border-radius:6px;display:none}
+.log .g{color:#3fb950}.log .r{color:#f85149}.log .b{color:#58a6ff}.log .y{color:#d29922}
+.result{color:#3fb950;font-size:.9rem;white-space:pre-wrap;padding:1rem;background:#0d1117;border:1px solid #238636;border-radius:6px;display:none}
+.btn{display:block;width:100%;padding:1rem;background:rgba(63,185,80,.06);border:1px solid #1a3a1e;border-radius:8px;color:#3fb950;font-family:inherit;font-size:1rem;cursor:pointer;text-align:center;transition:all .15s;margin-bottom:.8rem}
+.btn:hover{background:rgba(63,185,80,.12);border-color:#3fb950}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.warn{color:#f85149;font-size:.85rem;text-align:center;margin-bottom:1rem}
+footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #21262d;color:#484f58;font-size:.8rem;text-align:center}
+nav{display:flex;gap:.5rem;margin-bottom:1.5rem}
+nav a{color:#c9d1d9;text-decoration:none;background:#161b22;border:1px solid #21262d;padding:.4rem .8rem;border-radius:6px;font-size:.85rem}
+nav a:hover,nav a.active{border-color:#3fb950;color:#3fb950}
+</style>
+<div class="wrap">
+<nav>
+  <a href="p.html">p.so</a>
+  <a href="r.html" class="active">r.so</a>
+  <a href="r2.html">r2.so</a>
+</nav>
+<h1>🟢 r.so — Root</h1>
+<p class="sub">uid=0 + SELinux Permissive + root_proof 验证</p>
+
+<div class="card">
+  <h2>📋 Payload Info</h2>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>File</td><td>r.so (86,464 bytes)</td></tr>
+    <tr><td>功能</td><td>cred 替换 → uid=0 + SELinux Permissive</td></tr>
+    <tr><td>Root</td><td><span class="badge b-green">YES</span></td></tr>
+    <tr><td>设备</td><td>Xiaomi Pad 7S Pro (violin)</td></tr>
+    <tr><td>验证</td><td><span class="badge b-green">PASS</span> got_root=1 uid=0 euid=0</td></tr>
+    <tr><td>证据</td><td>/data/local/tmp/root_proof = root (root:root)</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🚀 Run</h2>
+  <p class="warn">⚠️ 设备可能重启 · 保存工作后再运行</p>
+  <button class="btn" id="run-btn" onclick="start()">▶ Launch r.so</button>
+  <div class="status" id="status">Ready</div>
+  <div class="log" id="log"></div>
+  <div class="result" id="result"></div>
+</div>
+
+<footer>IonStack Violin · CVE-2026-43499 · r.so · 安全研究</footer>
+</div>
+
+<script>
+const RUN_ID=Date.now().toString(36)+Math.random().toString(36).slice(2);
+const PAYLOAD="r";
+const MAX_ATTEMPTS=3;
+const TIMEOUT=8000;
+let done=false,attempt=0,timer=0,confirmed=false;
+const frames=[];
+const logEl=document.getElementById("log");
+const statusEl=document.getElementById("status");
+const resultEl=document.getElementById("result");
+const btnEl=document.getElementById("run-btn");
+
+function log(m){logEl.style.display="block";logEl.textContent+=m+"\n";logEl.scrollTop=logEl.scrollHeight}
+function setS(m){statusEl.textContent=m;document.title=m}
+
+function childUrl(n){
+  const dir=location.pathname.replace(/[^/]*$/,"");
+  return dir+"exploit.html?run="+encodeURIComponent(RUN_ID)+"&attempt="+n+"&payload="+encodeURIComponent(PAYLOAD);
+}
+
+function cleanup(){for(const f of frames){try{f.remove()}catch(e){}}frames.length=0}
+
+function showResult(lines,msg){
+  cleanup();btnEl.disabled=false;
+  resultEl.style.display="block";
+  resultEl.textContent=(lines||[]).join("\n")+(msg?"\n"+msg:"");
+  setS("✅ Root achieved");
+  try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+}
+
+function start(){
+  if(done)return;btnEl.disabled=true;logEl.textContent="";
+  log("[*] Starting r.so exploit...");
+  attempt=0;confirmed=false;startAttempt();
+}
+
+function startAttempt(){
+  if(done||confirmed||attempt>=MAX_ATTEMPTS){setS("❌ All attempts failed");btnEl.disabled=false;return}
+  attempt++;
+  setS("Attempt "+attempt+"/"+MAX_ATTEMPTS);
+  log("[*] Loading iframe #"+attempt);
+  const f=document.createElement("iframe");
+  f.style.cssText="position:fixed;left:0;top:0;width:1px;height:1px;opacity:.01;pointer-events:none;border:0";
+  f.src=childUrl(attempt);frames.push(f);document.body.appendChild(f);
+  timer=setTimeout(()=>{if(!done){log("[-] Timeout");try{f.remove()}catch(e){}startAttempt()}},TIMEOUT);
+}
+
+addEventListener("message",e=>{
+  const d=e.data;if(!d||d.run!==RUN_ID||done)return;
+  if(d.type==="device"){
+    clearTimeout(timer);
+    const ok=confirm("Device: "+(d.deviceId||"?")+"\n"+(d.isSupported?"✓ Supported. May reboot. Continue?":"⚠ Not supported. Will reboot. Continue?"));
+    if(!ok){done=true;cleanup();setS("Cancelled");return}
+    const ok2=confirm("Save work. OK to proceed.");
+    if(!ok2){done=true;cleanup();setS("Cancelled");return}
+    confirmed=true;
+    try{e.source.postMessage({type:"decision",run:RUN_ID,attempt:d.attempt,ok:true},"*")}catch(e){done=true;cleanup()}
+    return;
+  }
+  if(d.type==="stop"){done=true;clearTimeout(timer);cleanup();setS("Stopped");return}
+  if(d.type==="fail"){clearTimeout(timer);if(confirmed){done=true;cleanup();setS("Failed");return}for(let i=0;i<frames.length;i++){try{if(frames[i].contentWindow===e.source){frames[i].remove();frames.splice(i,1);break}}catch(e){}}log("[-] Failed, retrying...");startAttempt();return}
+  if(d.type==="progress"){clearTimeout(timer);for(const l of(d.lines||[]))log("  "+l);if(d.finalMessage)log(d.finalMessage);setS("Running...");return}
+  if(d.type==="success"){showResult(d.lines,d.finalMessage)}
+});
+</script>
