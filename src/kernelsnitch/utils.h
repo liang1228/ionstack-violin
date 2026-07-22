@@ -143,6 +143,75 @@ static inline void pin_to_core(size_t core)
     sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
 }
 
+/*
+ * pin_to_core_safe: 从 allowed affinity mask 中选择最优 CPU
+ *
+ * 在 Firefox 沙箱中，进程的 affinity mask 可能被限制。
+ * 先检查哪些 CPU 可用，再选择频率最高的。
+ * 如果没有可用 CPU，回退到当前 CPU。
+ */
+static inline int pin_to_core_safe(void)
+{
+    cpu_set_t allowed;
+    CPU_ZERO(&allowed);
+    if (sched_getaffinity(0, sizeof(allowed), &allowed) != 0) {
+        return sched_getcpu();
+    }
+
+    long configured = sysconf(_SC_NPROCESSORS_CONF);
+    if (configured <= 0 || configured > CPU_SETSIZE) {
+        configured = CPU_SETSIZE;
+    }
+
+    int best = -1;
+    uint64_t best_freq = 0;
+    for (int cpu = 0; cpu < configured; cpu++) {
+        if (!CPU_ISSET(cpu, &allowed)) continue;
+
+        char path[160];
+        uint64_t online = 1;
+        snprintf(path, sizeof(path),
+                 "/sys/devices/system/cpu/cpu%d/online", cpu);
+        int fd = open(path, O_RDONLY | O_CLOEXEC);
+        if (fd >= 0) {
+            char buf[8] = {0};
+            if (read(fd, buf, sizeof(buf) - 1) > 0 && buf[0] == '0') {
+                close(fd);
+                continue;
+            }
+            close(fd);
+        }
+
+        uint64_t freq = 0;
+        snprintf(path, sizeof(path),
+                 "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", cpu);
+        fd = open(path, O_RDONLY | O_CLOEXEC);
+        if (fd >= 0) {
+            char buf[32] = {0};
+            if (read(fd, buf, sizeof(buf) - 1) > 0) {
+                freq = (uint64_t)strtoull(buf, NULL, 10);
+            }
+            close(fd);
+        }
+
+        if (best < 0 || freq > best_freq) {
+            best = cpu;
+            best_freq = freq;
+        }
+    }
+
+    if (best < 0) {
+        best = sched_getcpu();
+        if (best < 0) best = 0;
+    }
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(best, &cpuset);
+    sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+    return best;
+}
+
 static inline void reset_cpu_pin(void)
 {
     cpu_set_t cpuset;
