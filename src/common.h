@@ -412,7 +412,7 @@ uintptr_t pselect_write_value(void);
 uintptr_t pselect_write_target(void);
 int pselect_custom_write_enabled(void);
 int pselect_write_shape(void);
-void set_pselect_write(uintptr_t target, uintptr_t value);
+void set_pselect_write(uintptr_t target, uintptr_t value, int shape);
 void clear_pselect_write(void);
 
 int slide_pselect_words_per_set(void);
@@ -496,5 +496,6 @@ int patch_cred_sid(int fd, uintptr_t cred);
 int patch_cred_object(int fd, uintptr_t cred);
 int install_android_root(int fd);
 int install_kernelsu_late_load(void);
+int direct_cred_replace(void);
 
 #endif

