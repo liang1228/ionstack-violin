@@ -1,0 +1,6 @@
+build/
+*.bak
+*.bak-*
+*.o
+*.so
+.DS_Store
