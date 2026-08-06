@@ -28,13 +28,6 @@ This project is a full-chain kernel privilege escalation research of **CVE-2026-
 - **Goal:** Evaluate exploit feasibility on authorized test devices, reproduce the attack chain, and use findings to fix product vulnerabilities
 
 **Current status: CVE trigger confirmed, local primitives partially established, but the full in-browser privilege escalation chain is not yet closed.**
-n## Root Evidence
-
-![Root Evidence](evidence/evidence.jpg)
-
-Screenshot shows `r.so` producing `got_root=1`, `uid=0`, `euid=0`; `/data/local/tmp/root_proof` owned by `root:root`.
-
-> Full audit report: [evidence/report.md](evidence/report.md), kernel info dump: [violin-kernel-info2.zip](evidence/violin-kernel-info2.zip)。
 n## KernelSU Root Success
 ![KernelSU Root](evidence/ksu-root-success.jpg)
 
