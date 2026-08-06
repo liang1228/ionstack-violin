@@ -2,9 +2,7 @@
 
 # ⚡ IonStack Violin
 
-**CVE-2026-43499 (GhostLock) 内核提权研究 — Xiaomi Pad 7S Pro**
-
-**CVE-2026-43499 (GhostLock) Kernel Privilege Escalation Research — Xiaomi Pad 7S Pro**
+**CVE-2026-43499 内核提权研究 — Xiaomi Pad 7S Pro**
 
 ---
 
@@ -14,398 +12,172 @@
 ![Android](https://img.shields.io/badge/Android-16%20(HyperOS%203.0)-green?logo=android)
 ![Status](https://img.shields.io/badge/Status-Research%20in%20Progress-yellow)
 
+[English](README_EN.md)
+
 </div>
 
 ---
 
-## 📖 项目简介 / Overview
+## 项目简介
 
-### 中文
+本项目是对 **CVE-2026-43499**（代号 GhostLock / IonStack）在 **小米平板7S Pro**（代号 `violin`）上的内核提权链研究。
 
-本项目是对 **CVE-2026-43499**（代号 GhostLock / IonStack）在 **小米平板7S Pro**（代号 `violin`，内核 `6.6.77-android15-8`，HyperOS 3.0 / Android 16）上的完整提权链研究。
+- **目标设备：** Xiaomi Pad 7S Pro，Android 16，HyperOS 3.0
+- **内核版本：** `6.6.77-android15-8`
+- **浏览器环境：** Firefox for Android 151.0
+- **研究目标：** 在授权测试设备上评估漏洞提权可行性，复现攻击链，据此修复产品漏洞
 
-研究目标是在授权测试设备上评估该漏洞的本地提权可行性，复现完整攻击链，并据此修复产品漏洞。
-
-**当前状态：CVE 触发已确认，KASLR 泄漏路径已在 shell 域建立，但完整浏览器内提权链尚未闭合。**
-
-### English
-
-This project is a full-chain kernel privilege escalation research of **CVE-2026-43499** (codename GhostLock / IonStack) on the **Xiaomi Pad 7S Pro** (codename `violin`, kernel `6.6.77-android15-8`, HyperOS 3.0 / Android 16).
-
-The goal is to evaluate the local privilege escalation feasibility on authorized test devices, reproduce the full attack chain, and use the findings to fix product vulnerabilities.
-
-**Current status: CVE trigger confirmed, KASLR leak path established in shell domain, but the full in-browser privilege escalation chain is not yet closed.**
+**当前状态：CVE 触发已确认，局部原语已建立，但完整浏览器内提权链尚未闭合。**
 
 ---
 
-## 🔬 研究思路 / Research Approach
+## 研究思路
 
-### 总体架构 / Overall Architecture
+### 总体流程
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     IonStack 利用链总览                              │
-│                     IonStack Exploit Chain Overview                 │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ① CVE 触发          ② UAF 利用           ③ KASLR 泄漏             │
-│  CVE Trigger    →    UAF Exploit      →   KASLR Leak               │
-│                                                                     │
-│  futex requeue       stale waiter         sched_blocked_reason      │
-│  EDEADLK rollback    stack overlap        tracefs raw event         │
-│                                                                     │
-│  ④ 任意写原语         ⑤ 凭据修补           ⑥ Root                   │
-│  Write Primitive  →  Cred Patch       →   Root                     │
-│                                                                     │
-│  pselect fdset       in-place uid=0       SELinux Enforcing         │
-│  rbtree overlap      caps=FULL            framework alive           │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+CVE 触发 → UAF 利用 → 地址泄漏 → 写原语 → 凭据修改 → Root
 ```
 
----
+整个利用链通过浏览器页面（Firefox）触发，利用内核 futex 子系统中的一个释放后使用（UAF）缺陷，经过多个阶段逐步获取内核读写能力，最终实现提权。
 
-### 阶段一：CVE 触发 / Phase 1: CVE Trigger
+### 阶段一：漏洞触发
 
-**中文：**
+CVE-2026-43499 的根因在 Linux 内核 futex 子系统的 `FUTEX_CMP_REQUEUE_PI` 路径中。当 requeue 操作检测到特定竞争条件时，内核的清理逻辑会操作错误的等待者结构体，导致一个已释放的内核对象仍可通过悬空指针访问。
 
-CVE-2026-43499 的核心是 Linux 内核 futex 子系统中 `FUTEX_CMP_REQUEUE_PI` 的一个缺陷。当 requeue 操作检测到死锁条件时，`remove_waiter()` 函数存在 **UAF（Use-After-Free）**：它清零了错误任务的 `pi_blocked_on` 字段，导致一个 `rt_mutex_waiter` 结构体在被释放后仍可通过 `task->pi_blocked_on` 悬空指针访问。
+**研究发现：**
+- 触发条件已在目标设备上独立复现
+- 悬空等待者指针在超时后仍然存活
+- 等待者与系统调用栈帧之间存在可利用的空间重叠关系
 
-**触发条件：**
-- 使用 `FUTEX_CMP_REQUEUE_PI` 触发死锁回滚（返回 `-1`，`errno=EDEADLK`）
-- 随后 waiter 超时返回 `ETIMEDOUT`
-- 此时 stale waiter 指针仍然存活（`pi_blocked_on` 未被正确清理）
+### 阶段二：栈空间重叠
 
-**English:**
+内核栈上的等待者结构体与某些系统调用的用户态缓冲区存在空间重叠关系。通过精确控制输入参数，可以将等待者的内部字段映射到用户可控的缓冲区位置。
 
-CVE-2026-43499 stems from a flaw in the Linux kernel's futex subsystem in `FUTEX_CMP_REQUEUE_PI`. When a requeue operation detects a deadlock condition, the `remove_waiter()` function has a **Use-After-Free**: it clears the wrong task's `pi_blocked_on` field, leaving an `rt_mutex_waiter` struct accessible via a dangling pointer after deallocation.
+**研究约束：**
+- 偏移量必须与目标内核版本精确匹配
+- 错误的偏移会导致内核 panic 或设备重启
+- 已通过原厂内核二进制反汇编逐一验证
 
-**Trigger conditions:**
-- `FUTEX_CMP_REQUEUE_PI` deadlock rollback (`ret=-1`, `errno=EDEADLK`)
-- Subsequent waiter timeout (`ETIMEDOUT`)
-- Stale waiter pointer survives (`pi_blocked_on` not properly cleaned)
+### 阶段三：地址空间泄漏
 
----
+内核地址空间布局随机化（KASLR）是利用链的核心障碍。研究发现了一条通过内核 tracing 子系统泄漏内核代码段基地址的路径。
 
-### 阶段二：栈帧重叠 / Phase 2: Stack Overlap
+**研究发现：**
+- 在 ADB shell 域（特定权限组）可以读取 tracing 原始事件
+- 事件中的函数返回地址可推导出当前 boot 的内核代码段基地址
+- Firefox app 进程由于 SELinux 策略限制，无法直接访问该泄漏源
+- 内核基地址每次启动都会变化，不可跨 boot 复用
 
-**中文：**
+**已排除的泄漏路径：**
+- `/proc/kallsyms`、`/proc/iomem` — 普通 shell 读取被 SELinux 拒绝
+- 字符设备 ioctl — 对目标设备所有可访问节点逐一审计，均无被动地址输出
+- Perfetto trace broker — app 域无 consumer 读取权限
 
-研究的关键发现是 futex waiter 的栈帧位置与 `pselect()`/`poll()` 系统调用的 fdset 缓冲区在内核栈上存在重叠：
+### 阶段四：写原语构建
 
-- futex waiter 位于 syscall 栈 `sp-0x200`
-- `pselect` 的三组 fd_set（in/out/ex）也从同一区域复制
-- 通过精心构造 `nfds` 参数，可以将 waiter 的字段（`tree`、`pi_parent`、`task`、`lock`）映射到 fd_set 的特定 word
+将 UAF 转化为可控的内核写原语是研究中最具挑战性的阶段。研究了多条路线：
 
-**关键约束：**
-- `PSELECT_WAITER_WORD_SHIFT=0`（已由原厂内核反汇编确认）
-- `shift=1` 是错误方法，会导致 waiter 整体错 8 字节并引发 panic
-
-**English:**
-
-A key finding is that the futex waiter's stack frame overlaps with the `pselect()`/`poll()` syscall fdset buffers on the kernel stack:
-
-- Futex waiter is at syscall stack `sp-0x200`
-- `pselect`'s three fd_set groups (in/out/ex) are copied from the same region
-- By carefully crafting the `nfds` parameter, waiter fields (`tree`, `pi_parent`, `task`, `lock`) can be mapped to specific fd_set words
-
-**Key constraints:**
-- `PSELECT_WAITER_WORD_SHIFT=0` (confirmed by factory kernel disassembly)
-- `shift=1` is incorrect — causes 8-byte misalignment and kernel panic
-
----
-
-### 阶段三：KASLR 泄漏 / Phase 3: KASLR Leak
-
-**中文：**
-
-内核地址空间布局随机化（KASLR）是利用链的核心障碍。研究发现了一条通过 `sched_blocked_reason` tracefs 原始事件泄漏 canonical `_text` 地址的路径：
-
-1. **ADB shell 域**：`shell` 用户（uid=2000）属于 `readtracefs` 组，可以读取 `/sys/kernel/tracing/per_cpu/cpu0/trace_pipe_raw`
-2. **事件解析**：`sched_blocked_reason`（ID=109）的 `caller` 字段位于 payload offset 16，宽度 8 字节
-3. **地址推导**：`caller - (worker_thread - _text) - 0x9c` = 当前 boot 的 `_text` canonical 地址
-
-**重要限制：**
-- Firefox app 进程（UID 10270, `u:r:untrusted_app:s0`）没有 `readtracefs` 权限
-- 该泄漏仅在 ADB shell 域可用，不可直接作为浏览器 payload 的 oracle
-- canonical 地址每次 boot 都会改变，不可跨 boot 复用
-
-**English:**
-
-Kernel Address Space Layout Randomization (KASLR) is the core barrier of the exploit chain. A path was found to leak the canonical `_text` address through `sched_blocked_reason` tracefs raw events:
-
-1. **ADB shell domain**: The `shell` user (uid=2000) belongs to the `readtracefs` group and can read `/sys/kernel/tracing/per_cpu/cpu0/trace_pipe_raw`
-2. **Event parsing**: `sched_blocked_reason` (ID=109) has a `caller` field at payload offset 16, width 8 bytes
-3. **Address derivation**: `caller - (worker_thread - _text) - 0x9c` = current boot's canonical `_text` address
-
-**Critical limitations:**
-- Firefox app process (UID 10270, `u:r:untrusted_app:s0`) lacks `readtracefs` permission
-- This leak is only available in ADB shell domain, cannot serve as an in-browser payload oracle
-- Canonical addresses change every boot — cannot be reused across reboots
-
----
-
-### 阶段四：写原语研究 / Phase 4: Write Primitive Research
-
-**中文：**
-
-研究了多种将 UAF 转化为内核任意写原语的路径：
-
-| 路线 | 方法 | 状态 |
+| 路线 | 概述 | 状态 |
 |------|------|------|
-| **Direct pselect** | 通过 pselect fdset 覆写 waiter 字段 | post-copy barrier 下 oracle=0，语义阻断 |
-| **rt_mutex PI chain** | 利用 `rt_mutex_adjust_prio_chain` 的 rbtree 操作 | 第一轮 `noop_llseek` 后离开受控页，未闭合 |
-| **fops 劫持** | 通过 rbtree 操作覆写 `ashmem_misc.fops` 指针槽 | `ROUTE_REACHED=1` 但 CFI 写入失败 |
-| **P0/direct-map** | 利用 direct-map 数据页 | P0 指针不是 canonical text，不能用于 fops/CFI |
-| **Bad Epoll (CVE-2026-46242)** | `ep_remove()` UAF + 320-byte cross-cache | 静态漏洞已确认，ARM64 exploit 未建立 |
-| **256-fd pselect** | 扩展 nfds 使 waiter->lock 落入 kernel-page | fd-mask readiness 状态机待建模 |
+| 系统调用缓冲区覆写 | 利用 UAF 与系统调用缓冲区的栈重叠覆写等待者字段 | 存在竞争同步问题，原语未建立 |
+| 优先级继承链 | 利用内核 PI 优先级树的操作实现间接写入 | 链路中途离开受控区域，未闭合 |
+| 文件操作表劫持 | 覆写设备文件的函数指针表 | 路由可达但写入阶段失败 |
+| 替代 CVE 路径 | 评估其他公开内核漏洞在目标设备上的可行性 | 静态条件已确认，ARM64 移植未完成 |
 
-**English:**
+### 阶段五：凭据修改
 
-Multiple paths were researched to convert the UAF into a kernel arbitrary write primitive:
+传统提权方法（替换进程凭据为内核初始凭据）会导致 SELinux 上下文变化，触发 Android framework 崩溃（黑屏）。
 
-| Route | Method | Status |
-|-------|--------|--------|
-| **Direct pselect** | Overwrite waiter fields via pselect fdset | oracle=0 post-copy barrier, semantically blocked |
-| **rt_mutex PI chain** | Leverage `rt_mutex_adjust_prio_chain` rbtree ops | First round exits controlled page at `noop_llseek`, not closed |
-| **fops hijack** | Overwrite `ashmem_misc.fops` pointer slot via rbtree | `ROUTE_REACHED=1` but CFI write failed |
-| **P0/direct-map** | Use direct-map data pages | P0 pointer is not canonical text, cannot use for fops/CFI |
-| **Bad Epoll (CVE-2026-46242)** | `ep_remove()` UAF + 320-byte cross-cache | Static vuln confirmed, ARM64 exploit not established |
-| **256-fd pselect** | Extend nfds so waiter->lock lands in kernel-page | fd-mask readiness state machine not yet modeled |
+**研究方案：** 在不改变凭据指针和 SELinux 安全上下文的前提下，原地修改进程凭据结构体中的 UID/GID 和 capability 字段。
 
----
+**设计约束：**
+- 不修改安全指针 → SELinux 上下文保持为 `shell`
+- 不关闭 SELinux enforcing → 全局策略不变
+- 不替换凭据指针 → 进程身份连续性保持
 
-### 阶段五：原地凭据修补 / Phase 5: In-Place Cred Patch
+**预期效果：** `uid=0(root)` 且 SELinux 仍为 Enforcing，framework 不受影响。
 
-**中文：**
+### 阶段六：攻击面审计
 
-传统提权方法（替换 `task->cred` 为 `init_cred`）会导致 SELinux context 变为 `kernel`，触发 zygote/system_server 崩溃（黑屏）。
-
-**原地修补方案**（不杀 framework）：
-
-不替换 cred 指针，只修改 cred 结构体内的字段：
-
-| 偏移 | 字段 | 写入值 |
-|------|------|--------|
-| +8 | uid + gid | 0x0 |
-| +16 | suid + sgid | 0x0 |
-| +24 | euid + egid | 0x0 |
-| +32 | fsuid + fsgid | 0x0 |
-| +40 | securebits | 0x0 |
-| +48~80 | capability × 5 | `0x000001ffffffffff` (CAP_FULL) |
-
-**关键设计：**
-- `cred + 128`（security pointer）**不修改** → SELinux SID 保持 `shell`
-- `selinux_enforcing` **不修改** → 保持 `1`（Enforcing）
-- `task->cred` / `task->real_cred` 指针 **不变**
-
-**预期结果：** `uid=0(root) context=u:r:shell:s0`，framework 不受影响。
-
-**English:**
-
-The traditional approach (replacing `task->cred` with `init_cred`) changes the SELinux context to `kernel`, crashing zygote/system_server (black screen).
-
-**In-place patch approach** (framework stays alive):
-
-Instead of replacing the cred pointer, modify fields within the cred struct:
-
-| Offset | Field | Value |
-|--------|-------|-------|
-| +8 | uid + gid | 0x0 |
-| +16 | suid + sgid | 0x0 |
-| +24 | euid + egid | 0x0 |
-| +32 | fsuid + fsgid | 0x0 |
-| +40 | securebits | 0x0 |
-| +48~80 | capability × 5 | `0x000001ffffffffff` (CAP_FULL) |
-
-**Key design:**
-- `cred + 128` (security pointer) is **NOT modified** → SELinux SID stays `shell`
-- `selinux_enforcing` is **NOT modified** → stays `1` (Enforcing)
-- `task->cred` / `task->real_cred` pointers are **unchanged**
-
-**Expected result:** `uid=0(root) context=u:r:shell:s0`, framework unaffected.
-
----
-
-### 阶段六：安全审计 / Phase 6: Security Audits
-
-**中文：**
-
-研究过程中对设备攻击面进行了系统性审计：
+对目标设备的用户态可访问接口进行了系统性安全审计：
 
 **字符设备审计：**
-- `/dev/mali0` — `open()` 有固件初始化，非被动 oracle（已排除）
-- `/dev/ashmem` — `open()` 被 SELinux `neverallow` 阻断（已排除）
-- `/dev/camlog` — `read()` 会消费 FIFO 记录（已排除）
-- `/dev/hpc-*` — 全部有状态操作，无被动查询（已排除）
-- `/dev/xr_*` — 无 `untrusted_app` CIL 投影（已排除）
+- 对 `/dev` 下所有可访问节点进行了权限元数据采集和 SELinux CIL 属性展开
+- 逐一审计了 GPU、DMA heap、ashmem、NPU、camera log、XRing 等设备的 ioctl ABI
+- 结论：所有可访问字符设备均为有状态接口，无被动内核地址泄漏能力
 
-**SELinux CIL 权限分析：**
-- `untrusted_app` 仅对 `gpu_device`（mali0）和 `dmabuf_system_heap_device`（XRing heap）有字符设备访问权
-- tracefs `sched_blocked_reason` 对 app 域有 `neverallow` 阻断
-- 无 `readtracefs` 的 privileged broker 可供 app 调用
-
-**English:**
-
-Systematic attack surface auditing was performed during research:
-
-**Character device audit:**
-- `/dev/mali0` — `open()` has firmware init, not a passive oracle (excluded)
-- `/dev/ashmem` — `open()` blocked by SELinux `neverallow` (excluded)
-- `/dev/camlog` — `read()` consumes FIFO records (excluded)
-- `/dev/hpc-*` — all stateful, no passive queries (excluded)
-- `/dev/xr_*` — no `untrusted_app` CIL projection (excluded)
-
-**SELinux CIL permission analysis:**
-- `untrusted_app` only has char device access to `gpu_device` (mali0) and `dmabuf_system_heap_device` (XRing heaps)
-- tracefs `sched_blocked_reason` has `neverallow` for app domain
-- No `readtracefs` privileged broker available for app invocation
+**SELinux 策略分析：**
+- 解析了平台和厂商 CIL 策略的 `untrusted_app` 字符设备访问闭包
+- 确认 app 域对 tracing 子系统存在 `neverallow` 阻断
+- 确认无可用的 `readtracefs` privileged broker 供 app 调用
 
 ---
 
-## 🧪 实验变体 / Experimental Variants
+## 已排除的路径
 
-**中文：**
+以下路径经严格验证后已确认不可行：
 
-研究过程中构建了大量实验变体（E1–E24+），每个变体仅修改一个变量：
+1. 把 direct-map 区域地址误认为内核代码段地址
+2. 跨启动复用内核地址（KASLR 每次启动变化）
+3. 多个 watchdog 观测变体（均导致重启）
+4. 以特定返回值判定 requeue 成功（需严格校验错误码）
+5. 普通 shell 读取被 SELinux 保护的内核符号表
+6. 错误的等待者偏移计算（导致内核 panic）
+7. 公开 Linux LPE 路线（目标内核配置不满足前置条件）
 
-| 实验 | 假设 | 结果 |
+---
+
+## 证据状态
+
+| 阶段 | 状态 | 说明 |
 |------|------|------|
-| E1 | rb_parent_color 设置 RB_RED 触发重平衡 | 无重启，boot_id 未变 |
-| E2 | 修改 CMP_REQUEUE_PI 比较值 | 待验证 |
-| E3 | lock owner 字段 | 待验证 |
-| E5 | 修正 pselect 布局 | 待验证 |
-| E19 | 上游完整链 | 已证伪，不重跑 |
-| E20 | exact stack offset 0 | 设备重启，已证伪 |
-| E21–E23 | watchdog 观测变体 | 全部重启，已排除 |
-| E24 | wake_state=0 | 重启，非根因修复 |
-
-**English:**
-
-Numerous experimental variants (E1–E24+) were built, each modifying only one variable:
-
-| Experiment | Hypothesis | Result |
-|------------|-----------|--------|
-| E1 | Set RB_RED on rb_parent_color to trigger rebalance | No reboot, boot_id unchanged |
-| E2 | Modify CMP_REQUEUE_PI comparison value | Pending verification |
-| E3 | Lock owner field | Pending verification |
-| E5 | Fix pselect layout | Pending verification |
-| E19 | Upstream full chain | Disproven, do not re-run |
-| E20 | Exact stack offset 0 | Device rebooted, disproven |
-| E21–E23 | Watchdog observation variants | All reboot, excluded |
-| E24 | wake_state=0 | Reboot, not root cause fix |
+| CVE 触发 | ✅ 已证实 | 目标设备上独立复现 |
+| 栈空间重叠 | ✅ 已证实 | 原厂内核反汇编验证 |
+| 地址泄漏（shell 域） | ✅ 已证实 | 同 boot canonical 基地址已推导 |
+| 地址泄漏（Firefox 域） | ❌ 不可用 | SELinux 策略阻断 |
+| 写原语 | ❌ 未建立 | 多条路线均存在阻断点 |
+| 凭据修改 | 🔨 仅构建 | 无设备运行时验证 |
+| 完整 Root | ❌ 未获得 | — |
 
 ---
 
-## 🚫 已排除的路径 / Excluded Paths
+## 技术栈
 
-**中文：**
-
-以下路径经严格验证后已确认不可行，不得重试：
-
-1. **P0/direct-map 地址当作 KASLR text** — `0xffffff80...` 不是 canonical `0xffffffe3...`/`0xffffffd3...`
-2. **跨 boot 复用 canonical 地址** — KASLR 每次 boot 改变
-3. **E21–E24 watchdog 变体** — 全部导致重启
-4. **`ret=0` 判定 requeue 成功** — 只有 `EDEADLK` 才表示 UAF rollback
-5. **普通 shell 读 `/proc/kallsyms`** — 被 SELinux 拒绝，零地址不等于可用地址
-6. **shift=1 waiter 偏移** — 导致 8 字节错位和 panic
-7. **公开 Linux LPE 路线** — `CONFIG_CRYPTO_USER_API_AEAD`、`AF_RXRPC`、`USER_NS` 均未启用
-
-**English:**
-
-The following paths have been rigorously verified as infeasible and must not be retried:
-
-1. **P0/direct-map address as KASLR text** — `0xffffff80...` is not canonical `0xffffffe3...`/`0xffffffd3...`
-2. **Reusing canonical addresses across boots** — KASLR changes every boot
-3. **E21–E24 watchdog variants** — all cause reboots
-4. **`ret=0` as requeue success** — only `EDEADLK` indicates UAF rollback
-5. **Plain shell reading `/proc/kallsyms`** — denied by SELinux, zero addresses are not usable
-6. **shift=1 waiter offset** — causes 8-byte misalignment and panic
-7. **Public Linux LPE routes** — `CONFIG_CRYPTO_USER_API_AEAD`, `AF_RXRPC`, `USER_NS` all disabled
+| 类别 | 说明 |
+|------|------|
+| 目标设备 | Xiaomi Pad 7S Pro (`violin`) |
+| 固件 | HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`), Android 16 |
+| 内核 | `6.6.77-android15-8`, ARM64 |
+| 浏览器 | Firefox for Android 151.0 |
+| 构建工具 | Android NDK r29, API 35 |
+| 分析工具 | 离线核验器（Python）、内核反汇编、BTF 解析、SELinux CIL 解析 |
 
 ---
 
-## 📊 证据状态矩阵 / Evidence Status Matrix
-
-| 阶段 / Stage | 状态 / Status | 证据 / Evidence |
-|---|---|---|
-| CVE trigger (EDEADLK) | ✅ 已证实 | `CMP_REQUEUE_PI=-1/errno=35` |
-| Stack overlap (shift=0) | ✅ 已证实 | 原厂 kernel 反汇编确认 |
-| tracefs KASLR leak (shell) | ✅ 已证实 | `caller=0xffffffd30a6d797c` → `_text` |
-| tracefs KASLR leak (Firefox) | ❌ 不可用 | SELinux `neverallow` on `untrusted_app` |
-| pselect write primitive | ❌ oracle=0 | post-copy barrier 下未建立 |
-| rt_mutex PI chain | ❌ 未闭合 | `noop_llseek` 后离开受控页 |
-| fops hijack (CFI) | ❌ 写入失败 | `CFI_RESULT ok=0 step=1 errno=22` |
-| In-place cred patch | 🔨 build-only | 无设备 runtime proof |
-| 完整 ARM64 root | ❌ 未获得 | — |
-
----
-
-## 🛠️ 技术栈 / Tech Stack
-
-| 类别 / Category | 技术 / Technology |
-|---|---|
-| 目标设备 / Target | Xiaomi Pad 7S Pro (`violin`), 25053RP5CC |
-| 固件 / Firmware | HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`), Android 16 |
-| 内核 / Kernel | `6.6.77-android15-8-g5770c661275f`, ARM64 |
-| 浏览器 / Browser | Firefox for Android 151.0 |
-| 构建 / Build | Android NDK r29, API 35, AArch64 |
-| 上游参考 / Upstream | `NebuSec/CyberMeowfia` (IonStack) |
-| 分析工具 / Analysis | Python 离线核验器, raw kernel 反汇编, BTF 解析, SELinux CIL 解析 |
-
----
-
-## 📂 项目结构 / Project Structure
+## 项目结构
 
 ```
 ionstack-violin/
-├── index.html                              # 启动器 — ANSI 终端 UI、重试逻辑、参数路由
-│                                           # Launcher — ANSI terminal UI, retry logic, param routing
-├── exploit.html                            # CVE-2026-43499 核心触发 + payload 加载器
-│                                           # Core CVE-2026-43499 trigger + payload loader
-├── diag.html                               # 诊断 / 断电恢复页面
-│                                           # Diagnostic / power-loss recovery page
-├── ansi.js                                 # 轻量 ANSI 转义码渲染器
-│                                           # Lightweight ANSI escape renderer
-├── run-rooted-e24-live-capture.sh          # root 设备内核日志实时捕获脚本
-│                                           # Rooted device live kernel log capture
-├── collect-rooted-panic-evidence.sh        # 重启后证据收集脚本
-│                                           # Post-reboot evidence collector
-└── README.md                               # 本文件 / This file
+├── index.html                         # 启动器 — 终端 UI、重试逻辑
+├── exploit.html                       # CVE 触发 + payload 加载
+├── diag.html                          # 诊断 / 断电恢复
+├── ansi.js                            # ANSI 渲染器
+├── run-rooted-e24-live-capture.sh     # 内核日志捕获脚本
+├── collect-rooted-panic-evidence.sh   # 重启后证据收集
+└── README.md                          # 本文件
 ```
 
 ---
 
-## 📋 设备信息 / Device Info
+## 免责声明
 
-```
-设备代号:    violin (Xiaomi Pad 7S Pro)
-型号:        25053RP5CC
-固件:        OS3.0.303.0.WOTCNXM
-Android:     16
-内核:        6.6.77-android15-8-g5770c661275f-abogki443185593-4k
-SPL:         2026-05-01
-Verified Boot: green
-```
-
----
-
-## ⚠️ 免责声明 / Disclaimer
-
-**中文：**
-
-本项目仅用于**授权安全研究和教育目的**。所有测试均在作者拥有并明确授权的设备上进行。作者不对任何滥用行为负责。请勿在未经授权的设备上使用本项目的任何内容。
-
-**English:**
-
-This project is provided **for authorized security research and educational purposes only**. All testing was performed on devices owned and explicitly authorized by the author. The authors are not responsible for any misuse. Do not use any content from this project on unauthorized devices.
+本项目仅用于 **授权安全研究和教育目的**。所有测试均在作者拥有并明确授权的设备上进行。作者不对任何滥用行为负责。
 
 ---
 
 <div align="center">
 
 **⚡ IonStack — 内核提权研究，浏览器交付**
-
-**⚡ IonStack — Kernel Privilege Escalation Research, Browser-Delivered**
 
 </div>
