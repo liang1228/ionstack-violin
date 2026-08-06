@@ -179,19 +179,16 @@ root 成功后自动：
 
 ```
 ionstack-violin/
-├── evidence/                           # 成功证据截图与内核信息
-├── exploit-site/                       # 浏览器利用页面 (HTML/JS)
-├── tools/                              # Python 离线审计/核验工具 (~50 个)
-├── violin-injector/                    # Android 注入器 app 源码
-├── session-20260723-cred-patch/        # 原地凭据修补实验源码
-├── ionstack-current-ktext/             # 已 root 设备内核符号表转储
-├── index.html                          # 启动器 — 终端 UI、重试逻辑
-├── exploit.html                        # CVE 触发 + payload 加载
-├── diag.html                           # 诊断 / 断电恢复
-├── ansi.js                             # ANSI 渲染器
-├── run-rooted-e24-live-capture.sh      # 内核日志捕获脚本
-├── collect-rooted-panic-evidence.sh    # 重启后证据收集
-└── README.md                           # 本文件
+├── evidence/                # 成功证据截图与内核信息
+│   ├── ksu-root-success.jpg #   KernelSU root 成功截图
+│   ├── evidence.jpg         #   p.so/r.so 本地运行证据
+│   └── violin-kernel-info2.zip  # root 设备内核信息转储
+├── exploit-site/            # 浏览器利用页面 (HTML/JS)
+├── tools/                   # Python 离线审计/核验工具 + C 工具源码
+├── jinghu-app/              # 戒指 app 源码 (Android/Shizuku)
+├── violin-injector/         # Violin 注入器 app 源码 (Kotlin)
+├── ionstack-current-ktext/  # 已 root 设备内核符号表转储
+└── README.md
 ```
 
 ---

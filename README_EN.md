@@ -166,19 +166,16 @@ After root, the loader automatically:
 
 ```
 ionstack-violin/
-├── evidence/                           # Success screenshots and kernel info
-├── exploit-site/                       # Browser-based exploit pages (HTML/JS)
-├── tools/                              # Python offline audit/verification tools (~50)
-├── violin-injector/                    # Android injector app source
-├── session-20260723-cred-patch/        # In-place cred patch experiment source
-├── ionstack-current-ktext/             # Rooted device kernel symbol dump
-├── index.html                          # Launcher — terminal UI, retry logic
-├── exploit.html                        # CVE trigger + payload loader
-├── diag.html                           # Diagnostic / power-loss recovery
-├── ansi.js                             # ANSI renderer
-├── run-rooted-e24-live-capture.sh      # Kernel log capture script
-├── collect-rooted-panic-evidence.sh    # Post-reboot evidence collector
-└── README_EN.md                        # This file
+├── evidence/                # Success screenshots and kernel info
+│   ├── ksu-root-success.jpg #   KernelSU root success screenshot
+│   ├── evidence.jpg         #   p.so/r.so local run evidence
+│   └── violin-kernel-info2.zip  # Rooted device kernel info dump
+├── exploit-site/            # Browser exploit pages (HTML/JS)
+├── tools/                   # Python offline audit tools + C tool sources
+├── jinghu-app/              # Ring app source (Android/Shizuku)
+├── violin-injector/         # Violin injector app source (Kotlin)
+├── ionstack-current-ktext/  # Rooted device kernel symbol dump
+└── README_EN.md
 ```
 
 ---
