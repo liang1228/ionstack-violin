@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">戒指</string>
+    <string name="screen_title">戒指</string>
+    <string name="screen_subtitle">强制模式 · 网络完整</string>
+    <string name="root_badge">ROOT</string>
+
+    <string name="cd_saved_logs">查看已保存日志</string>
+    <string name="cd_change_so">更换 SO</string>
+    <string name="cd_refresh">刷新设备门禁</string>
+    <string name="cd_shizuku">打开 Shizuku 激活引导</string>
+    <string name="cd_about">查看应用说明</string>
+
+    <string name="shizuku_card_title">Shizuku 服务</string>
+    <string name="shizuku_card_subtitle">官方 UserService 授权执行通道</string>
+    <string name="shizuku_checking">Shizuku：检查中…</string>
+    <string name="shizuku_inactive">Shizuku：未激活\n点击“激活 Shizuku”打开官方引导，完成后返回本应用。</string>
+    <string name="shizuku_unauthorized">Shizuku：服务已连接，但尚未授权本应用\n点击“授权 Shizuku”请求权限。</string>
+    <string name="shizuku_authorized">Shizuku：已连接并已授权\n后续命令会以 Shizuku 授权身份执行。</string>
+    <string name="activate_shizuku">激活 Shizuku</string>
+    <string name="authorize_shizuku">授权 Shizuku</string>
+    <string name="refresh">刷新</string>
+
+    <string name="device_gate_pending">设备门禁：尚未读取</string>
+    <string name="gate_passed">通过，可执行一次</string>
+    <string name="gate_failed">未通过</string>
+    <string name="device_gate_summary">设备门禁：%1$s\n设备=%2$s  型号=%3$s\n内核=%4$s\nSELinux=%5$s  启动完成=%6$s\nKernelSU 模块=%7$s  本次启动标记=%8$s</string>
+    <string name="device_gate_requirements">\n门禁要求：内核必须精确匹配、SELinux 为 Enforcing、系统启动完成、当前启动周期未执行且 KernelSU 未加载。</string>
+
+    <string name="run_payload_title">执行载荷</string>
+    <string name="run_payload_hint">每次完整启动只允许执行一次；执行后会自动核验内核、SELinux、Root 和网络。</string>
+    <string name="install_manager_before_run">执行前安装内置 KernelSU 管理器 32525</string>
+    <string name="run_v20">执行 v20（本次启动仅一次）</string>
+    <string name="run_custom">执行自定义 SO（本次启动仅一次）</string>
+    <string name="install_manager">安装管理器</string>
+
+    <string name="payload_so_title">载荷 SO</string>
+    <string name="payload_so_hint">可选择新的 arm64 SO；文件会保存到应用私有目录，重启应用后仍然保留。</string>
+    <string name="payload_loading">正在读取载荷…</string>
+    <string name="payload_mode_bundled">内置 v20</string>
+    <string name="payload_mode_custom">自定义 SO</string>
+    <string name="payload_summary">%1$s\n%2$s\nSHA-256  %3$s</string>
+    <string name="change_so">更换 SO</string>
+    <string name="bundled_v20">内置 v20</string>
+    <string name="use_bundled_v20">恢复内置 v20</string>
+
+    <string name="output_title">运行输出</string>
+    <string name="output_hint">命令实时输出会同步写入设备本地日志。</string>
+    <string name="saved_logs">已保存日志</string>
+    <string name="output_waiting">等待操作…</string>
+
+    <string name="confirm_run_title">确认执行一次性载荷</string>
+    <string name="confirm_run_message">即将使用：%1$s\nSHA-256：%2$s\n\n动作只适用于精确内核：\n%3$s\n\n同一启动周期再次点击会被设备端标记拒绝。</string>
+    <string name="bundled_payload_label">内置 v20 最终优化版 SO</string>
+    <string name="custom_payload_label">自定义 SO：%1$s</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_run">执行</string>
+    <string name="action_close">关闭</string>
+    <string name="action_share">分享</string>
+
+    <string name="saved_error_logs_title">已保存日志</string>
+    <string name="share_logs_chooser">分享戒指日志</string>
+    <string name="selected_payload_fallback">selected-payload.so</string>
+
+    <string name="about_title">戒指</string>
+    <string name="about_message">用于 v20 最终优化版载荷的 Material You 操作界面。\n\n应用通过 Shizuku UserService 授权执行，使用启动级标记防止重复运行，并在进程退出或设备重启时保留中断日志。\n\n界面参考：github.com/DP-Hridayan/aShellYou</string>
+
+    <string name="shizuku_required_title">需要激活 Shizuku</string>
+    <string name="shizuku_missing_message">未找到 Shizuku 应用。请先安装 Shizuku，然后按官方引导完成激活。\n\n%1$s</string>
+    <string name="action_dismiss">知道了</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- API 36 is the newest installed platform and matches the tested Android 16 target. -->
+    <issue id="OldTargetApi" severity="ignore" />
+
+    <!-- Core 1.19 and compileSdk 37 require an SDK platform not installed on this machine. -->
+    <issue id="GradleDependency">
+        <ignore regexp="compileSdk" />
+        <ignore regexp="androidx\.core:core" />
+    </issue>
+
+    <!-- This is an explicitly hashed external payload, not a library loaded by the App. -->
+    <issue id="UnsafeNativeCodeLocation">
+        <ignore regexp="preload_jinghu_v20_final_optimization\.so$" />
+    </issue>
+</lint>

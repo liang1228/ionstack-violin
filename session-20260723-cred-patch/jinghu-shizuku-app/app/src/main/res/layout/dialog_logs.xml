@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_jinghu_status"
+    android:fillViewport="true">
+
+    <TextView
+        android:id="@+id/logText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:padding="12dp"
+        android:textColor="?attr/colorOnSurface"
+        android:textIsSelectable="true"
+        android:textSize="11sp" />
+</androidx.core.widget.NestedScrollView>

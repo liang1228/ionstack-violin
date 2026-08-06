@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="true"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/jinghu_screen_horizontal_padding"
+        android:paddingTop="@dimen/jinghu_screen_top_padding"
+        android:paddingEnd="@dimen/jinghu_screen_horizontal_padding"
+        android:paddingBottom="@dimen/jinghu_screen_bottom_padding">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/logsAction"
+                android:layout_width="@dimen/jinghu_icon_button_size"
+                android:layout_height="@dimen/jinghu_icon_button_size"
+                android:layout_marginEnd="@dimen/jinghu_icon_button_gap"
+                android:contentDescription="@string/cd_saved_logs"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="12dp"
+                android:text=""
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_history_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnPrimaryContainer"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/changeSoAction"
+                android:layout_width="@dimen/jinghu_icon_button_size"
+                android:layout_height="@dimen/jinghu_icon_button_size"
+                android:layout_marginEnd="@dimen/jinghu_icon_button_gap"
+                android:contentDescription="@string/cd_change_so"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="12dp"
+                android:text=""
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_swap_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnPrimaryContainer"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/refreshAction"
+                android:layout_width="@dimen/jinghu_icon_button_size"
+                android:layout_height="@dimen/jinghu_icon_button_size"
+                android:layout_marginEnd="@dimen/jinghu_icon_button_gap"
+                android:contentDescription="@string/cd_refresh"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="12dp"
+                android:text=""
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_refresh_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnPrimaryContainer"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/shizukuAction"
+                android:layout_width="@dimen/jinghu_icon_button_size"
+                android:layout_height="@dimen/jinghu_icon_button_size"
+                android:layout_marginEnd="@dimen/jinghu_icon_button_gap"
+                android:contentDescription="@string/cd_shizuku"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="12dp"
+                android:text=""
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_bolt_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnPrimaryContainer"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/aboutAction"
+                android:layout_width="@dimen/jinghu_icon_button_size"
+                android:layout_height="@dimen/jinghu_icon_button_size"
+                android:contentDescription="@string/cd_about"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="12dp"
+                android:text=""
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_more_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnPrimaryContainer"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:insetTop="0dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:text="@string/screen_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="40sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_jinghu_root_badge"
+                android:gravity="center"
+                android:text="@string/root_badge"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="18dp"
+            android:text="@string/screen_subtitle"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/jinghu_section_gap"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/jinghu_card_corner"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/jinghu_card_padding">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_jinghu_icon_circle">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            app:srcCompat="@drawable/ic_check_24" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shizuku_card_title"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="19sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/shizuku_card_subtitle"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/shizukuStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:background="@drawable/bg_jinghu_status"
+                    android:gravity="center_vertical|start"
+                    android:minHeight="74dp"
+                    android:paddingStart="15dp"
+                    android:paddingTop="13dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="13dp"
+                    android:text="@string/shizuku_checking"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/jinghu_section_gap"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/deviceStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical|start"
+                android:minHeight="98dp"
+                android:padding="15dp"
+                android:text="@string/device_gate_pending"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/authorizeButton"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/jinghu_button_height"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/activate_shizuku"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimary"
+                app:backgroundTint="?attr/colorSurface"
+                app:cornerRadius="24dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/refreshButton"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/jinghu_button_height"
+                android:layout_weight="1"
+                android:text="@string/refresh"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimary"
+                app:backgroundTint="?attr/colorSurface"
+                app:cornerRadius="24dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/jinghu_section_gap"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/jinghu_card_corner"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/jinghu_card_padding">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/run_payload_title"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginBottom="8dp"
+                    android:lineSpacingMultiplier="1.08"
+                    android:text="@string/run_payload_hint"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/installManagerCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:checked="true"
+                    android:text="@string/install_manager_before_run"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/runButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/jinghu_primary_button_height"
+                    android:text="@string/run_v20"
+                    android:textAllCaps="false"
+                    android:textColor="?attr/colorOnPrimaryContainer"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="?attr/colorPrimaryContainer"
+                    app:cornerRadius="28dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/jinghu_section_gap"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/installManagerButton"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/jinghu_button_height"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/install_manager"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorPrimary"
+                app:backgroundTint="?attr/colorSurface"
+                app:cornerRadius="24dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progress"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:visibility="gone"
+                app:indicatorColor="?attr/colorPrimary"
+                app:indicatorSize="32dp"
+                app:trackThickness="3dp" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/jinghu_section_gap"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/jinghu_card_corner"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/jinghu_card_padding">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/payload_so_title"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginBottom="10dp"
+                    android:lineSpacingMultiplier="1.08"
+                    android:text="@string/payload_so_hint"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/payloadStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:background="@drawable/bg_jinghu_status"
+                    android:fontFamily="monospace"
+                    android:paddingStart="13dp"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="13dp"
+                    android:paddingBottom="11dp"
+                    android:text="@string/payload_loading"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/changeSoButton"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/jinghu_button_height"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/change_so"
+                        android:textAllCaps="false"
+                        android:textColor="?attr/colorPrimary"
+                        app:backgroundTint="?attr/colorSurface"
+                        app:cornerRadius="24dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/bundledSoButton"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/jinghu_button_height"
+                        android:layout_weight="1"
+                        android:text="@string/bundled_v20"
+                        android:textAllCaps="false"
+                        android:textColor="?attr/colorPrimary"
+                        app:backgroundTint="?attr/colorSurface"
+                        app:cornerRadius="24dp"
+                        app:strokeColor="?attr/colorOutline"
+                        app:strokeWidth="1dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/jinghu_card_corner"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/jinghu_card_padding">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/output_title"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/savedLogsButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="38dp"
+                        android:minHeight="0dp"
+                        android:text="@string/saved_logs"
+                        android:textAllCaps="false"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textSize="12sp"
+                        app:backgroundTint="?attr/colorPrimaryContainer"
+                        app:cornerRadius="19dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/output_hint"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/outputText"
+                    android:layout_width="match_parent"
+                    android:layout_height="285dp"
+                    android:background="@drawable/bg_jinghu_output"
+                    android:fontFamily="monospace"
+                    android:gravity="top|start"
+                    android:lineSpacingMultiplier="1.05"
+                    android:padding="13dp"
+                    android:scrollbars="vertical"
+                    android:text="@string/output_waiting"
+                    android:textColor="?attr/colorOnSecondaryContainer"
+                    android:textIsSelectable="true"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

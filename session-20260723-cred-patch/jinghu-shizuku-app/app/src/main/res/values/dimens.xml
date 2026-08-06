@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="jinghu_screen_horizontal_padding">20dp</dimen>
+    <dimen name="jinghu_screen_top_padding">12dp</dimen>
+    <dimen name="jinghu_screen_bottom_padding">34dp</dimen>
+    <dimen name="jinghu_section_gap">12dp</dimen>
+    <dimen name="jinghu_card_padding">18dp</dimen>
+    <dimen name="jinghu_card_corner">28dp</dimen>
+    <dimen name="jinghu_icon_button_size">48dp</dimen>
+    <dimen name="jinghu_icon_button_gap">8dp</dimen>
+    <dimen name="jinghu_button_height">48dp</dimen>
+    <dimen name="jinghu_primary_button_height">56dp</dimen>
+</resources>

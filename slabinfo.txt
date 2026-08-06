@@ -1,0 +1,4 @@
+kmalloc-256         6466   6624    256   32    2 : tunables    0    0    0 : slabdata    207    207      0
+kmalloc-192        27185  28665    192   21    1 : tunables    0    0    0 : slabdata   1365   1365      0
+kmalloc-128        48204  49280    128   32    1 : tunables    0    0    0 : slabdata   1540   1540      0
+kmalloc-96         33921  35574     96   42    1 : tunables    0    0    0 : slabdata    847    847      0

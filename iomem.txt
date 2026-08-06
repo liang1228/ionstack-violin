@@ -1,0 +1,151 @@
+00000000-001fffff : reserved
+00200000-02ffffff : System RAM
+  00210000-01eaffff : Kernel code
+  01eb0000-022bffff : reserved
+  022c0000-0255ffff : Kernel data
+03000000-03bfffff : reserved
+  03000000-03bfffff : reserved
+03c00000-05ffffff : System RAM
+  04200000-0427ffff : reserved
+  04400000-05c53fff : reserved
+06000000-07afffff : reserved
+  06000000-07afffff : reserved
+07b00000-3517ffff : System RAM
+  07ffe000-0f3fffff : reserved
+  20000000-2fffffff : reserved
+35180000-4207ffff : reserved
+  41680000-4207ffff : 41680000.xring,adsp-boot xring,adsp-boot
+42080000-4247ffff : System RAM
+42480000-42c7ffff : reserved
+42c80000-4347ffff : System RAM
+43480000-4637ffff : reserved
+46380000-47d7ffff : System RAM
+47d80000-4957ffff : reserved
+  47d80000-4917ffff : 41680000.xring,adsp-boot xring,adsp-boot
+49580000-4a37ffff : System RAM
+4a380000-4a3cffff : reserved
+4a3d0000-70000fff : System RAM
+  5f800000-663fffff : reserved
+70001000-70001fff : reserved
+70002000-7000ffff : System RAM
+70010000-7400ffff : reserved
+74010000-a0ffffff : System RAM
+  a0000000-a00fffff : reserved
+  a0a00000-a0dfffff : reserved
+a1000000-a103ffff : reserved
+a1040000-bf3fdfff : System RAM
+bf3fe000-bfffffff : reserved
+c0080000-c008004b : f0200000.arteris-noc arteris-noc@10560000
+ce400000-ce41ffff : ce400000.pcie dbi
+ce460000-ce47ffff : ce400000.pcie atu
+cec00000-cec1ffff : ce400000.pcie pci_ctrl
+ced00000-ced00fff : ce400000.pcie pcie_phy
+cee00000-cee3ffff : ce400000.pcie pcie_phy_apb0
+cf000000-cf000fff : ec138000.pinctrl HSS2_IOC
+cf001000-cf001fff : ec138000.pinctrl HSS2_IOM
+cf900000-cf90004b : f0200000.arteris-noc arteris-noc@10560000
+d7a00000-d7a1ffff : ce400000.pcie config
+da000000-dbffffff : pcie@ce400000
+dc000000-ddffffff : pcie@ce400000
+  dc000000-dc2fffff : PCI Bus 0001:01
+    dc000000-dc1fffff : 0001:01:00.0
+      dc000000-dc1fffff : 0001:01:00.0
+    dc200000-dc207fff : 0001:01:00.0
+  dc300000-dc300fff : 0001:00:00.0
+e0000000-e0000fff : e0000000.lms_rst lms_rst
+e0008000-e0008fff : e0008000.dw_apb_rtc dw_apb_rtc@E0008000
+e0009000-e0009003 : e0009000.doze_vote doze_vote@E0009000
+e000d000-e000dfff : ec138000.pinctrl LPIS_IOC
+e0010000-e0011fff : e0010000.timestamp timestamp@E0010000
+e0020000-e0020fff : e0020000.lpis_rst lpis_rst
+e0804000-e0804fff : e0804000.xring_firq xring_firq@E0804000
+e0f00000-e0f0004b : f0200000.arteris-noc arteris-noc@10560000
+e1310000-e1310fff : e1310000.xring,xr-audif xring,xr-audif@E1310000
+e1340000-e134004b : f0200000.arteris-noc arteris-noc@10560000
+e1506000-e1506fff : ec138000.pinctrl LPIS_IOM
+e1507000-e1507fff : e1507000.spi spi@E1507000
+e15087a0-e15087a3 : e15087a0.pm_comm pm_comm
+e15087b8-e15087bb : e15087b8.hpc hpc@E9000000
+e1550000-e155004b : f0200000.arteris-noc arteris-noc@10560000
+e1550080-e1550dff : f0200000.arteris-noc arteris-noc@10560000
+e1a40000-e1a42fff : e1a40000.dwc_ufs ufs_ctrl_mem
+e1a43000-e1a433ff : e1a40000.dwc_ufs mcq
+e1a44000-e1a44fff : e1a40000.dwc_ufs mcq_sqd
+e1a50000-e1a50fff : e1a40000.dwc_ufs ufs_sctrl_mem
+e1ae0000-e1ae004b : f0200000.arteris-noc arteris-noc@10560000
+e5200000-e520004b : f0200000.arteris-noc arteris-noc@10560000
+e5280000-e528004b : f0200000.arteris-noc arteris-noc@10560000
+e5300000-e530007b : vcx_vcmd_driver
+e5301000-e53017ff : vcx_vcmd_driver
+e5301c00-e5301c09 : vcx_vcmd_driver
+e5302000-e53020ff : vcx_vcmd_driver
+e5380000-e538004b : f0200000.arteris-noc arteris-noc@10560000
+e5400000-e5400dff : e5400000.media2_smmu
+e5410000-e5410dff : e5400000.media2_smmu
+e5700000-e570004b : f0200000.arteris-noc arteris-noc@10560000
+e6603000-e6603fff : ec138000.pinctrl CSI_IOC
+e7380000-e738004b : f0200000.arteris-noc arteris-noc@10560000
+e7400000-e7400077 : vcx_vcmd_driver
+e7400400-e74004ff : hantrodec0
+e7400800-e74013ff : hantrodec0
+e7480000-e748004b : f0200000.arteris-noc arteris-noc@10560000
+e7800000-e7800dff : e7800000.media1_smmu
+e7810000-e7810dff : e7800000.media1_smmu
+e7b00000-e7b0004b : f0200000.arteris-noc arteris-noc@10560000
+e9400000-e9400dff : e9400000.npu_smmu
+e9410000-e9410dff : e9400000.npu_smmu
+e9626000-e9626fff : e9626000.hpc_mbox hpc_mbox@E9626000
+e9c62000-e9c6204b : f0200000.arteris-noc arteris-noc@10560000
+e9c62080-e9c620cb : f0200000.arteris-noc arteris-noc@10560000
+e9f80000-eaf7ffff : e9f80000.gpu
+eb008000-eb00bfff : eb008000.tsensor tsensor@EB008000
+eb120000-eb12004b : f0200000.arteris-noc arteris-noc@10560000
+eb210000-eb213fff : eb210000.dsu_msc dsu_msc@EB210000
+ebc00000-ebc0ffff : GICD
+ebc80000-ebefffff : GICR
+ec001000-ec001fff : ec001000.peri_rst peri_rst
+ec00c000-ec00c01f : ec00c000.watchdog watchdog@EC00C000
+ec011000-ec011fff : xring_ipc@40020000
+ec100000-ec100fff : ec100000.i2c i2c@EC100000
+ec101000-ec101fff : ec101000.i2c i2c@EC101000
+ec102000-ec102fff : ec102000.i2c i2c@EC102000
+ec103000-ec103fff : ec103000.i2c i2c@EC103000
+ec104000-ec104fff : ec104000.i2c i2c@EC104000
+ec105000-ec105fff : ec105000.i2c i2c@EC105000
+ec106000-ec106fff : ec106000.i2c i2c@EC106000
+ec109000-ec109fff : ec109000.i2c i2c@EC109000
+ec10a000-ec10afff : ec10a000.i2c i2c@EC10A000
+ec10b000-ec10bfff : ec10b000.i2c i2c@EC10B000
+ec10c000-ec10cfff : ec10c000.i2c i2c@EC10C000
+ec10d000-ec10dfff : ec10d000.i2c i2c@EC10D000
+ec10e000-ec10efff : ec10e000.i2c i2c@EC10E000
+ec114000-ec114fff : ec114000.spi spi@EC114000
+ec130000-ec130fff : ec138000.pinctrl PERI_IOM
+ec138000-ec138fff : ec138000.pinctrl PERIL_IOC
+ec139000-ec139fff : ec138000.pinctrl PERIR_IOC
+ec300000-ec30004b : f0200000.arteris-noc arteris-noc@10560000
+ed014000-ed017fff : ed014000.dma-controller dma-controller@ED014000
+ed020000-ed02004b : f0200000.arteris-noc arteris-noc@10560000
+eec00000-eec0004b : f0200000.arteris-noc arteris-noc@10560000
+f0000000-f000004b : f0200000.arteris-noc arteris-noc@10560000
+f0100000-f010004b : f0200000.arteris-noc arteris-noc@10560000
+f0200000-f020004b : f0200000.arteris-noc arteris-noc@10560000
+f0200080-f02000cb : f0200000.arteris-noc arteris-noc@10560000
+f0200100-f02021df : f0200000.arteris-noc arteris-noc@10560000
+f0300000-f030004b : f0200000.arteris-noc arteris-noc@10560000
+f0300080-f03000cb : f0200000.arteris-noc arteris-noc@10560000
+f0300100-f030014b : f0200000.arteris-noc arteris-noc@10560000
+f0300180-f03001cb : f0200000.arteris-noc arteris-noc@10560000
+100000000-3ffffffff : System RAM
+  3ffffe000-3ffffffff : reserved
+800000000-83fffffff : System RAM
+  801780000-814bfffff : reserved
+  814c01000-814c42fff : reserved
+  814c43000-814c43fff : reserved
+  814c44000-814d79fff : reserved
+  814d7b000-814d7cfff : reserved
+  814d7d000-814d7dfff : reserved
+  814d7e000-814d8dfff : reserved
+  814d8e000-814d8ffff : reserved
+  814d90000-814db1fff : reserved
+  814db2000-83fffffff : reserved

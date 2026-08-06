@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Violin Root</string>
+
+    <!-- Status -->
+    <string name="status_title">状态</string>
+    <string name="status_shizuku_unavailable">❌ Shizuku 服务不可用</string>
+    <string name="status_shizuku_no_permission">⚠️ Shizuku 未授权</string>
+    <string name="status_shizuku_ready">✅ Shizuku 就绪</string>
+    <string name="status_file_exists">✅ 文件存在: %s</string>
+    <string name="status_file_missing">⚠️ 文件缺失: %s</string>
+    <string name="status_file_need_permission">⚠️ 需要先获取权限</string>
+
+    <!-- Steps -->
+    <string name="steps_title">步骤操作</string>
+    <string name="btn_copy_internal">1. 复制到内部存储</string>
+    <string name="btn_get_permission">2. 获取 Shizuku 权限</string>
+    <string name="btn_copy_tmp">3. 复制到 /data/local/tmp</string>
+    <string name="btn_activate">4. LD_PRELOAD 激活</string>
+
+    <!-- One-click -->
+    <string name="one_click_title">一键执行</string>
+    <string name="one_click_desc">将自动执行所有步骤完成 Violin CVE-2026-43499 exploit 注入</string>
+    <string name="btn_one_click">一键执行</string>
+    <string name="btn_settings">设置</string>
+
+    <!-- Log -->
+    <string name="log_title">日志输出</string>
+    <string name="log_start_copy_internal">开始复制到内部存储...</string>
+    <string name="log_copy_internal_success">复制到内部存储成功</string>
+    <string name="log_copy_internal_failed">复制到内部存储失败: %s</string>
+    <string name="log_start_request_permission">请求 Shizuku 权限...</string>
+    <string name="log_shizuku_unavailable">Shizuku 服务不可用，请先安装并激活 Shizuku</string>
+    <string name="log_permission_granted">Shizuku 权限已授予</string>
+    <string name="log_permission_denied">Shizuku 权限被拒绝</string>
+    <string name="log_need_permission_first">请先获取 Shizuku 权限</string>
+    <string name="log_start_copy_tmp">开始复制到 /data/local/tmp...</string>
+    <string name="log_copy_tmp_success">复制到 /data/local/tmp 成功，已设置可执行权限</string>
+    <string name="log_copy_tmp_failed">复制到 /data/local/tmp 失败</string>
+    <string name="log_md5_mismatch">⚠️ MD5 校验不匹配，文件可能损坏</string>
+    <string name="log_start_inject">开始 LD_PRELOAD 注入...</string>
+    <string name="log_inject_exit_code">注入命令退出码: %d</string>
+    <string name="log_stdout">标准输出: %s</string>
+    <string name="log_stderr">标准错误: %s</string>
+    <string name="log_start_one_click">开始一键执行...</string>
+    <string name="log_step_copy_internal">步骤 1/4: 复制到内部存储...</string>
+    <string name="log_step_permission">步骤 2/4: 获取 Shizuku 权限...</string>
+    <string name="log_step_copy_tmp">步骤 3/4: 复制到 /data/local/tmp...</string>
+    <string name="log_step_inject">步骤 4/4: LD_PRELOAD 注入...</string>
+    <string name="log_step_success">✅ 步骤完成</string>
+    <string name="log_step_failed">❌ 步骤失败: %s</string>
+    <string name="log_one_click_success">🎉 一键执行完成！</string>
+    <string name="log_one_click_failed">❌ 一键执行失败</string>
+    <string name="log_one_click_aborted">⚠️ 一键执行中止</string>
+
+    <!-- Toasts -->
+    <string name="toast_copy_success">复制成功</string>
+    <string name="toast_copy_failed">复制失败: %s</string>
+    <string name="toast_shizuku_unavailable">Shizuku 不可用</string>
+    <string name="toast_permission_granted">权限已授予</string>
+    <string name="toast_permission_denied">权限被拒绝</string>
+    <string name="toast_need_permission">需要先获取权限</string>
+    <string name="toast_copy_tmp_success">已复制到 /data/local/tmp</string>
+    <string name="toast_copy_tmp_failed">复制失败</string>
+    <string name="toast_inject_success">注入成功</string>
+    <string name="toast_inject_failed">注入失败</string>
+    <string name="toast_one_click_success">一键执行成功</string>
+    <string name="toast_one_click_failed">一键执行失败</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+</resources>

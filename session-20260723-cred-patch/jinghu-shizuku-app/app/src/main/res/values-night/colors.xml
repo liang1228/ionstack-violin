@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="jinghu_primary">#98D5B7</color>
+    <color name="jinghu_on_primary">#003826</color>
+    <color name="jinghu_primary_container">#00513A</color>
+    <color name="jinghu_on_primary_container">#B4F1D2</color>
+    <color name="jinghu_secondary">#B3CCBC</color>
+    <color name="jinghu_on_secondary">#20352A</color>
+    <color name="jinghu_secondary_container">#364B40</color>
+    <color name="jinghu_on_secondary_container">#CFE8D8</color>
+    <color name="jinghu_surface">#101411</color>
+    <color name="jinghu_surface_container">#1C211D</color>
+    <color name="jinghu_surface_container_high">#272B27</color>
+    <color name="jinghu_on_surface">#E0E4DE</color>
+    <color name="jinghu_on_surface_variant">#BFC9C1</color>
+    <color name="jinghu_outline">#89938C</color>
+    <color name="jinghu_outline_variant">#404943</color>
+</resources>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <uses-permission android:name="com.violin.injector.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+
+    <application
+        android:theme="@style/Theme.ViolinRoot"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:requestLegacyExternalStorage="true"
+        tools:targetApi="33">
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            android:exported="true"
+            android:multiprocess="false"
+            android:authorities="com.violin.injector.shizuku" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

@@ -1,0 +1,7 @@
+NDK_ROOT ?= /mnt/e/workspace/projects/xiaomi-root/ndk
+TCHAIN := $(NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
+SYSROOT := $(TCHAIN)/sysroot
+RES := $(TCHAIN)/lib/clang/21
+
+rooto: rooto.c
+	clang --target=aarch64-linux-android35 --sysroot=$(SYSROOT) -resource-dir $(RES) --rtlib=compiler-rt --unwindlib=none -O2 -o $@ $<

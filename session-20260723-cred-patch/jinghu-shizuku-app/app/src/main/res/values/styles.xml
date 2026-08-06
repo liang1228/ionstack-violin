@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Jinghu" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/jinghu_primary</item>
+        <item name="colorOnPrimary">@color/jinghu_on_primary</item>
+        <item name="colorPrimaryContainer">@color/jinghu_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/jinghu_on_primary_container</item>
+        <item name="colorSecondary">@color/jinghu_secondary</item>
+        <item name="colorOnSecondary">@color/jinghu_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/jinghu_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/jinghu_on_secondary_container</item>
+        <item name="colorSurface">@color/jinghu_surface</item>
+        <item name="colorSurfaceContainer">@color/jinghu_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/jinghu_surface_container_high</item>
+        <item name="colorOnSurface">@color/jinghu_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/jinghu_on_surface_variant</item>
+        <item name="colorOutline">@color/jinghu_outline</item>
+        <item name="colorOutlineVariant">@color/jinghu_outline_variant</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+    </style>
+</resources>

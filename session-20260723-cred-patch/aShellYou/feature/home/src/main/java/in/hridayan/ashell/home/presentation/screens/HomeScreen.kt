@@ -1,0 +1,704 @@
+@file:OptIn(
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalFlexBoxApi::class
+)
+
+package `in`.hridayan.ashell.home.presentation.screens
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalFlexBoxApi
+import androidx.compose.foundation.layout.FlexAlignItems
+import androidx.compose.foundation.layout.FlexBox
+import androidx.compose.foundation.layout.FlexDirection
+import androidx.compose.foundation.layout.FlexWrap
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import `in`.hridayan.ashell.core.common.LocalDialogManager
+import `in`.hridayan.ashell.core.domain.model.LocalAdbWorkingMode
+import `in`.hridayan.ashell.core.presentation.components.button.IconWithTextButton
+import `in`.hridayan.ashell.core.presentation.components.card.CustomCard
+import `in`.hridayan.ashell.core.presentation.components.haptic.withHaptic
+import `in`.hridayan.ashell.core.presentation.components.svg.DynamicColorImageVectors
+import `in`.hridayan.ashell.core.presentation.components.svg.vectors.appBranding
+import `in`.hridayan.ashell.core.presentation.components.text.AutoResizeableText
+import `in`.hridayan.ashell.core.resources.R
+import `in`.hridayan.ashell.core.utils.showToast
+import `in`.hridayan.ashell.home.presentation.component.dialog.HomeDialogKey
+import `in`.hridayan.ashell.home.presentation.component.dialog.RebootOptionsDialog
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun HomeScreen(
+    localAdbWorkingMode: Int = LocalAdbWorkingMode.BASIC,
+    savedDevicesCount: Int = 0,
+    isLogcatRunning: Boolean = false,
+    onOtgClick: () -> Unit = {},
+    onFastbootClick: () -> Unit = {},
+    onWifiAdbClick: () -> Unit = {},
+    onWifiAdbPairClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onLocalAdbClick: () -> Unit = {},
+    onLogcatClick: () -> Unit = {},
+    onReboot: (Array<String>) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val res = LocalResources.current
+    val dialogManager = LocalDialogManager.current
+
+    val onClickOtgAdbCard: () -> Unit = onOtgClick
+    val onClickFastbootCard: () -> Unit = onFastbootClick
+
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            val collapsedFraction = scrollBehavior.state.collapsedFraction
+            val expandedBrandingScale = 1f
+            val collapsedBrandingScale = 0.7f
+
+            val brandingScale =
+                lerp(expandedBrandingScale, collapsedBrandingScale, collapsedFraction)
+
+            MediumTopAppBar(
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                title = {
+                    Image(
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = brandingScale
+                            scaleY = brandingScale
+                        },
+                        imageVector = DynamicColorImageVectors.appBranding(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit
+                    )
+                },
+                actions = {
+                    IconButton(
+                        modifier = Modifier.padding(start = 10.dp),
+                        onClick = withHaptic {}
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_help2),
+                            contentDescription = null,
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Modifier.padding(end = 10.dp),
+                        onClick = withHaptic {
+                            onSettingsClick()
+                        }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_settings),
+                            contentDescription = null,
+                        )
+                    }
+                }
+            )
+        }
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 25.dp)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = it
+        ) {
+            item {
+                AutoResizeableText(
+                    modifier = Modifier.padding(
+                        top = 15.dp,
+                        bottom = 5.dp,
+                        start = 5.dp,
+                        end = 5.dp
+                    ),
+                    text = stringResource(R.string.adb),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item {
+                FlexBox(
+                    modifier = Modifier.fillMaxWidth(),
+                    config = {
+                        direction(FlexDirection.Row)
+                        wrap(FlexWrap.Wrap)
+                        gap(10.dp)
+                        alignItems(FlexAlignItems.Stretch)
+                    }
+                ) {
+                    LocalAdbCard(
+                        modifier = Modifier.flex { grow(1f) },
+                        enabledLocalAdbMode = localAdbWorkingMode,
+                        onClick = withHaptic {
+                            onLocalAdbClick()
+                        }
+                    )
+
+                    OtgAdbCard(
+                        modifier = Modifier.flex { grow(1f) },
+                        onClick = withHaptic { onClickOtgAdbCard() }
+                    )
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        WirelessDebuggingCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            onStartClick = withHaptic {
+                                if (savedDevicesCount == 0) {
+                                    showToast(context, res.getString(R.string.pair_a_device_first))
+                                    return@withHaptic
+                                }
+
+                                onWifiAdbClick()
+                            },
+                            onPairClick = onWifiAdbPairClick
+                        )
+                    }
+                }
+            }
+
+            item {
+                AutoResizeableText(
+                    modifier = Modifier.padding(
+                        top = 20.dp,
+                        bottom = 5.dp,
+                        start = 5.dp,
+                        end = 5.dp
+                    ),
+                    text = stringResource(R.string.fastboot_and_recovery),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item {
+                FlexBox(
+                    modifier = Modifier.fillMaxWidth(),
+                    config = {
+                        direction(FlexDirection.Row)
+                        wrap(FlexWrap.Wrap)
+                        gap(10.dp)
+                        alignItems(FlexAlignItems.Stretch)
+                    }
+                ) {
+                    FastbootCard(
+                        modifier = Modifier.flex { grow(1f) },
+                        onClick = onClickFastbootCard
+                    )
+                    AdbSideloadCard(
+                        modifier = Modifier.flex { grow(1f) },
+                    )
+                }
+            }
+
+            item {
+                AutoResizeableText(
+                    modifier = Modifier.padding(
+                        top = 20.dp,
+                        bottom = 5.dp,
+                        start = 5.dp,
+                        end = 5.dp
+                    ),
+                    text = stringResource(R.string.utilities),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            item {
+                LogcatCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    isRunning = isLogcatRunning,
+                    onClick = withHaptic {
+                        onLogcatClick()
+                    })
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
+            }
+        }
+    }
+
+    when (dialogManager.activeDialog) {
+        HomeDialogKey.RebootOptions -> RebootOptionsDialog(
+            onDismiss = { dialogManager.dismiss() },
+            onReboot = onReboot
+        )
+
+        else -> dialogManager.dismiss()
+    }
+}
+
+@Composable
+private fun LocalAdbCard(
+    modifier: Modifier = Modifier,
+    enabledLocalAdbMode: Int = LocalAdbWorkingMode.BASIC,
+    onClick: () -> Unit
+) {
+    val workingModeText = when (enabledLocalAdbMode) {
+        LocalAdbWorkingMode.BASIC -> stringResource(R.string.basic_shell)
+        LocalAdbWorkingMode.SHIZUKU -> stringResource(R.string.shizuku)
+        LocalAdbWorkingMode.ROOT -> stringResource(R.string.root)
+        else -> stringResource(R.string.none)
+    }
+
+    val detailsText = stringResource(R.string.active) + " ($workingModeText)"
+
+    NavItemCompactCard(
+        modifier = modifier,
+        title = stringResource(R.string.local_adb),
+        description = detailsText,
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_adb),
+                contentDescription = null,
+                tint = it
+            )
+        },
+        badgeText = stringResource(R.string.this_device),
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun OtgAdbCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    NavItemCompactCard(
+        modifier = modifier,
+        title = stringResource(R.string.adb_via_otg),
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_otg),
+                contentDescription = null,
+                tint = it
+            )
+        },
+        badgeText = stringResource(R.string.other_device),
+        iconContainerColor = MaterialTheme.colorScheme.tertiary,
+        iconContentColor = MaterialTheme.colorScheme.onTertiary,
+        onClick = onClick,
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+@Composable
+private fun WirelessDebuggingCard(
+    modifier: Modifier = Modifier,
+    onStartClick: () -> Unit,
+    onPairClick: () -> Unit
+) {
+    NavItemCard(
+        modifier = modifier,
+        title = stringResource(R.string.adb_via_wireless_debugging),
+        description = stringResource(R.string.adb_via_wireless_debugging_summary),
+        leadingIcon = { tint ->
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_wireless),
+                contentDescription = null,
+                tint = tint
+            )
+        },
+        clickable = false,
+        badges = {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Badge(badgeText = stringResource(R.string.this_device))
+
+                Badge(badgeText = stringResource(R.string.other_device))
+            }
+        },
+        buttons = {
+            FlexBox(
+                modifier = Modifier.fillMaxWidth(),
+                config = {
+                    direction(FlexDirection.Row)
+                    wrap(FlexWrap.Wrap)
+                    gap(10.dp)
+                    alignItems(FlexAlignItems.Stretch)
+                }
+            ) {
+                IconWithTextButton(
+                    modifier = Modifier.flex { grow(1f) },
+                    icon = painterResource(R.drawable.ic_pair),
+                    text = stringResource(R.string.pair),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary
+                    ),
+                    contentDescription = null,
+                    onClick = withHaptic {
+                        onPairClick()
+                    })
+
+                IconWithTextButton(
+                    modifier = Modifier.flex { grow(1f) },
+                    icon = painterResource(R.drawable.ic_play),
+                    text = stringResource(R.string.start),
+                    contentDescription = null,
+                    onClick = withHaptic { onStartClick() })
+
+                /* OutlinedIconButtonWithText(
+                     modifier = Modifier.flex { grow(1f) },
+                     text = stringResource(R.string.instructions),
+                     painter = painterResource(R.drawable.ic_open_in_new),
+                     onClick = withHaptic {
+                         UrlUtils.openUrl(
+                             url = URL_WIRELESS_DEBUGGING_INSTRUCTIONS,
+                             context = context
+                         )
+                     })*/
+            }
+        }
+    )
+}
+
+@Composable
+private fun FastbootCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    NavItemCompactCard(
+        modifier = modifier,
+        title = stringResource(R.string.fastboot),
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_flash_on),
+                contentDescription = null,
+                tint = it
+            )
+        },
+        badgeText = stringResource(R.string.other_device),
+        onClick = withHaptic { onClick() }
+    )
+}
+
+@Composable
+fun AdbSideloadCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    NavItemCompactCard(
+        modifier = modifier,
+        title = stringResource(R.string.adb_sideload),
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_mobile_arrow_down),
+                contentDescription = null,
+                tint = it
+            )
+        },
+        badgeText = stringResource(R.string.other_device),
+        iconContainerColor = MaterialTheme.colorScheme.tertiary,
+        iconContentColor = MaterialTheme.colorScheme.onTertiary,
+        onClick = withHaptic { onClick() }
+    )
+}
+
+@Composable
+fun LogcatCard(
+    modifier: Modifier = Modifier,
+    isRunning: Boolean = false,
+    onClick: () -> Unit
+) {
+    val cardColors = if (isRunning) {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    } else {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    NavItemCard(
+        modifier = modifier,
+        title = stringResource(R.string.logcat),
+        description = stringResource(R.string.des_logcat),
+        leadingIcon = { tint ->
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_bug),
+                contentDescription = null,
+                tint = tint
+            )
+        },
+        cardColors = cardColors,
+        onClick = withHaptic { onClick() },
+        badges = {
+            if (isRunning) {
+                Badge(
+                    badgeText = stringResource(R.string.running),
+                    badgeContainerColor = MaterialTheme.colorScheme.primary,
+                    badgeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    borderEnabled = false,
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun NavItemCompactCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    enabled: Boolean = true,
+    title: String,
+    description: String = "Details",
+    leadingIcon: @Composable (Color) -> Unit = {},
+    trailingIcon: @Composable () -> Unit = {},
+    cardColors: CardColors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ),
+    iconContainerColor: Color = MaterialTheme.colorScheme.primary,
+    iconContentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    badgeContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    badgeContentColor: Color = MaterialTheme.colorScheme.onSurface,
+    badgeText: String = "",
+) {
+    CustomCard(
+        modifier = modifier,
+        colors = cardColors,
+        onClick = onClick,
+        clickable = enabled
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(iconContainerColor)
+                        .padding(5.dp),
+                ) {
+                    leadingIcon(iconContentColor)
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    fontWeight = FontWeight.SemiBold,
+                    color = cardColors.contentColor
+                )
+
+                trailingIcon()
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(iconContainerColor)
+                )
+
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cardColors.contentColor
+                )
+            }
+
+            Badge(
+                badgeText = badgeText,
+                badgeContainerColor = badgeContainerColor,
+                badgeContentColor = badgeContentColor
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NavItemCompactCardPreview() {
+    NavItemCompactCard(
+        title = "Local ADB",
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.size(20.dp),
+                painter = painterResource(R.drawable.ic_adb),
+                contentDescription = null,
+                tint = it
+            )
+        }
+    )
+}
+
+@Composable
+private fun NavItemCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    clickable: Boolean = true,
+    title: String,
+    description: String = "Details",
+    leadingIcon: @Composable (Color) -> Unit = {},
+    trailingIcon: @Composable () -> Unit = {},
+    cardColors: CardColors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ),
+    iconContainerColor: Color = MaterialTheme.colorScheme.primary,
+    iconContentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    badges: @Composable () -> Unit = {},
+    buttons: @Composable () -> Unit = {},
+) {
+    CustomCard(
+        modifier = modifier,
+        colors = cardColors,
+        onClick = onClick,
+        clickable = clickable
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(15.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(15.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(iconContainerColor)
+                        .padding(5.dp),
+                ) {
+                    leadingIcon(iconContentColor)
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    fontWeight = FontWeight.SemiBold,
+                    color = cardColors.contentColor
+                )
+
+                trailingIcon()
+            }
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = cardColors.contentColor
+            )
+
+            badges()
+            buttons()
+        }
+    }
+}
+
+@Composable
+private fun Badge(
+    modifier: Modifier = Modifier,
+    badgeText: String,
+    badgeContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    badgeContentColor: Color = MaterialTheme.colorScheme.onSurface,
+    borderEnabled: Boolean = true
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(badgeContainerColor)
+            .then(
+                if (borderEnabled) Modifier.border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(50)
+                ) else Modifier
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = badgeText,
+            style = MaterialTheme.typography.labelSmall,
+            color = badgeContentColor
+        )
+    }
+}
+
+@Suppress("SameParameterValue")
+private fun lerp(startValue: Float, endValue: Float, fraction: Float): Float {
+    return startValue + fraction * (endValue - startValue)
+}
