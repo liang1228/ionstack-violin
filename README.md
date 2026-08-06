@@ -39,7 +39,6 @@ n## KernelSU Root 成功
 ![KernelSU Root](evidence/ksu-root-success.jpg)
 
 戒指 app 显示 ROOT 已获取（强制模式），KernelSU 管理器 v3.2.5 工作中（越狱模式），LKM 模式运行，LSPosed 已激活（API 102）。设备：Xiaomi Pad 7S Pro 12.5，内核 `6.6.77-android15-8`，HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`)
-![KernelSU Root](evidence/ksu-root-success.jpg)
 
 KernelSU 管理器显示 `ksud` 和 MT管理器已获得超级用户权限，SELinux 处于宽容模式。设备型号 25053RP5CC，内核 `6.6.77-android15-8`。
 
