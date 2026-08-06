@@ -37,7 +37,7 @@ Screenshot shows `r.so` producing `got_root=1`, `uid=0`, `euid=0`; `/data/local/
 > Full audit report: [evidence/report.md](evidence/report.md), kernel info dump: [violin-kernel-info2.zip](evidence/violin-kernel-info2.zip)。
 n## KernelSU Root Success
 
-![KernelSU Root](evidence/ksu-root-success.png)
+![KernelSU Root](evidence/ksu-root-success.jpg)
 
 KernelSU Manager shows `ksud` and MT Manager granted superuser permission. SELinux in permissive mode. Device model 25053RP5CC, kernel `6.6.77-android15-8`.
 
