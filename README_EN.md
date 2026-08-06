@@ -10,7 +10,7 @@
 ![CVE](https://img.shields.io/badge/CVE--2026--43499-critical)
 ![Kernel](https://img.shields.io/badge/Kernel-6.6.77--android15--8-blue)
 ![Android](https://img.shields.io/badge/Android-16%20(HyperOS%203.0)-green?logo=android)
-![Status](https://img.shields.io/badge/Status-Research%20in%20Progress-yellow)
+![Status](https://img.shields.io/badge/Status-Root%20Achieved-green)
 
 [中文](README.md)
 
@@ -22,12 +22,77 @@
 
 This project is a full-chain kernel privilege escalation research of **CVE-2026-43499** (codename GhostLock / IonStack) on the **Xiaomi Pad 7S Pro** (codename `violin`).
 
-- **Target device:** Xiaomi Pad 7S Pro, Android 16, HyperOS 3.0
-- **Kernel:** `6.6.77-android15-8`
-- **Browser:** Firefox for Android 151.0
-- **Goal:** Evaluate exploit feasibility on authorized test devices, reproduce the attack chain, and use findings to fix product vulnerabilities
+- **Target devices:** Xiaomi Pad 7S Pro / Xiaomi Pad 7 Ultra / Xiaomi 15S Pro
+- **Kernel:** `6.6.77-android15-8-g5770c661275f-abogki443185593-4k`
+- **Android:** 16 (HyperOS 3.0, `OS3.0.303.0.WOTCNXM`)
+- **Goal:** Evaluate exploit feasibility, achieve full root, install KernelSU + LSPosed
 
-**Current status: CVE trigger confirmed, local primitives partially established, but the full in-browser privilege escalation chain is not yet closed.**
+**Current status: Root successfully achieved, KernelSU + LSPosed fully operational.**
+
+---
+
+## Root Evidence
+
+![KernelSU Root](evidence/ksu-root-success.jpg)
+
+Ring app showing ROOT acquired (enforcement mode), KernelSU Manager v3.2.5 working [jailbreak mode], running in LKM mode, LSPosed activated (API 102). Device: Xiaomi Pad 7S Pro 12.5, kernel `6.6.77-android15-8`, HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`)
+
+---
+
+## One-Shot Root Tool (jinghu loader)
+
+A one-shot root loader based on CVE-2026-43499, achieving kernel privilege escalation from userspace via `LD_PRELOAD` and automatically installing KernelSU.
+
+### Usage
+
+```sh
+# 1. Push loader to device
+adb push preload_jinghu_v20_final_optimization.so /data/local/tmp/
+
+# 2. Reboot and wait for boot to complete
+adb shell getprop sys.boot_completed  # should return 1
+
+# 3. Verify kernel version
+adb shell uname -r
+# Expected: 6.6.77-android15-8-g5770c661275f-abogki443185593-4k
+
+# 4. Verify clean baseline
+adb shell getenforce        # Enforcing
+adb shell su -c id          # should NOT return root
+
+# 5. Execute (once per boot only)
+adb shell LD_PRELOAD=/data/local/tmp/preload_jinghu_v20_final_optimization.so /system/bin/true
+```
+
+### Seven-Stage Execution Flow
+
+| Stage | Name | Duration | Description |
+|-------|------|----------|-------------|
+| 1/7 | Environment check | ~0.002s | Validate `boot_completed`, `enforcing`, `kernelsu_loaded` |
+| 2/7 | Save boot ID | ~0.001s | Record and verify boot ID |
+| 3/7 | Locate kernel | ~39s | KASLR leak, derive `_text` base address |
+| 4/7 | Acquire root | ~61s | CVE trigger → direct root (`init_cred`) |
+| 5/7 | Restore boot ID | ~0.001s | Bind mount restore original boot ID |
+| 6/7 | Load KernelSU | ~0.4s | insmod KO + start ksud |
+| 7/7 | Final verification | ~5s | Verify root/SELinux/network, cleanup temp files |
+| | **Total** | **~106s** | |
+
+### Expected Results
+
+- `su -c id` → `uid=0(root) context=u:r:ksu:s0`
+- SELinux stays Enforcing (brief Permissive bootstrap, restored after)
+- KernelSU 32525 / UAPI 2 / LKM / late-load
+- LSPosed activated, ReZygisk running
+- IP and DNS connectivity normal
+- Temp files cleaned up
+
+### Supported Devices
+
+| Device | Codename | Kernel |
+|--------|----------|--------|
+| Xiaomi Pad 7 Ultra | jinghu | `6.6.77-android15-8-g5770c661275f-abogki443185593-4k` |
+| Xiaomi Pad 7S Pro | violin | Same |
+| Xiaomi 15S Pro | dijun | Same |
 
 ---
 
@@ -36,95 +101,36 @@ This project is a full-chain kernel privilege escalation research of **CVE-2026-
 ### Overall Flow
 
 ```
-CVE Trigger → UAF Exploitation → Address Leak → Write Primitive → Cred Patch → Root
+CVE Trigger → UAF Exploitation → Address Leak → Write Primitive → Cred Patch → Root → KernelSU
 ```
-
-The entire exploit chain is triggered through a browser page (Firefox), leveraging a Use-After-Free vulnerability in the kernel's futex subsystem. It progresses through multiple stages to gain kernel read/write capability and ultimately achieve privilege escalation.
 
 ### Phase 1: Vulnerability Trigger
 
-CVE-2026-43499 originates from a flaw in the Linux kernel futex subsystem's `FUTEX_CMP_REQUEUE_PI` path. When a requeue operation encounters a specific race condition, the kernel's cleanup logic operates on an incorrect waiter struct, leaving a freed kernel object accessible via a dangling pointer.
-
-**Findings:**
-- Trigger conditions independently reproduced on the target device
-- Dangling waiter pointer survives after timeout
-- An exploitable spatial overlap exists between the waiter and syscall stack frames
+CVE-2026-43499 stems from a flaw in the Linux kernel futex subsystem's `FUTEX_CMP_REQUEUE_PI` path. The kernel's cleanup logic operates on an incorrect waiter struct, leaving a freed kernel object accessible via a dangling pointer.
 
 ### Phase 2: Stack Space Overlap
 
-The waiter struct on the kernel stack overlaps with userspace buffers of certain syscalls. By precisely controlling input parameters, the waiter's internal fields can be mapped to user-controllable buffer positions.
+The waiter struct on the kernel stack overlaps with userspace buffers. Using `pselect` with `nfds=320` and `shift=0` offset, the waiter's `tree`, `pi_parent`, `task`, and `lock` fields are mapped to user-controllable fdset word positions.
 
-**Constraints:**
-- Offsets must exactly match the target kernel version
-- Incorrect offsets cause kernel panic or device reboot
-- All values verified through factory kernel binary disassembly
+### Phase 3: KASLR Leak
 
-### Phase 3: Address Space Leak
+The canonical `_text` base address is leaked through `sched_blocked_reason` tracefs raw events. The loader's slide route automates KASLR bypass — no manual address input required.
 
-Kernel Address Space Layout Randomization (KASLR) is the core barrier of the exploit chain. A path was found to leak the kernel code segment base address through the kernel's tracing subsystem.
+### Phase 4: Write Primitive
 
-**Findings:**
-- In the ADB shell domain (specific permission group), tracing raw events are readable
-- Function return addresses in events can derive the current boot's kernel code segment base
-- The Firefox app process cannot access this leak source due to SELinux policy restrictions
-- The kernel base address changes every boot and cannot be reused across reboots
+Through pselect syscall buffer overwrite and rt_mutex PI chain operations, an arbitrary kernel write primitive is established. The direct write route uses a three-step `per_cpu_offset` → `entry_task` → `cred` write sequence.
 
-**Excluded leak paths:**
-- `/proc/kallsyms`, `/proc/iomem` — SELinux denies plain shell reads
-- Character device ioctls — all accessible nodes on the target device audited, none produce passive address outputs
-- Perfetto trace broker — app domain lacks consumer read permission
+### Phase 5: Credential Patch
 
-### Phase 4: Write Primitive Construction
+`init_cred` replaces `task->cred`, while `selinux_enforcing` is zeroed via the pselect primitive. KernelSU completes its domain transition during the brief Permissive window before Enforcing is restored.
 
-Converting the UAF into a controllable kernel write primitive was the most challenging phase. Multiple routes were researched:
+### Phase 6: KernelSU Installation
 
-| Route | Description | Status |
-|-------|-------------|--------|
-| Syscall buffer overwrite | Leverage UAF/syscall buffer stack overlap to overwrite waiter fields | Race synchronization issue, primitive not established |
-| Priority inheritance chain | Use kernel PI priority tree operations for indirect writes | Chain exits controlled region midway, not closed |
-| File operations table hijack | Overwrite device file function pointer table | Route reachable but write stage failed |
-| Alternative CVE paths | Evaluate other public kernel vulns on the target device | Static conditions confirmed, ARM64 port incomplete |
-
-### Phase 5: Credential Modification
-
-The traditional privilege escalation approach (replacing process credentials with kernel initial credentials) causes SELinux context changes that crash the Android framework (black screen).
-
-**Research approach:** Modify the UID/GID and capability fields in-place within the process credential struct, without changing the credential pointer or SELinux security context.
-
-**Design constraints:**
-- Do not modify security pointer → SELinux context stays `shell`
-- Do not disable SELinux enforcing → global policy unchanged
-- Do not replace credential pointer → process identity continuity preserved
-
-**Expected result:** `uid=0(root)` with SELinux still Enforcing, framework unaffected.
-
-### Phase 6: Attack Surface Audit
-
-A systematic security audit was performed on userspace-accessible interfaces of the target device:
-
-**Character device audit:**
-- Permission metadata collected and SELinux CIL attribute closure expanded for all accessible `/dev` nodes
-- ioctl ABI audited for GPU, DMA heap, ashmem, NPU, camera log, XRing, and other devices
-- Conclusion: all accessible character devices are stateful interfaces with no passive kernel address leak capability
-
-**SELinux policy analysis:**
-- Parsed `untrusted_app` character device access closure from platform and vendor CIL policies
-- Confirmed `neverallow` block on tracing subsystem for the app domain
-- Confirmed no usable `readtracefs` privileged broker available for app invocation
-
----
-
-## Excluded Paths
-
-The following paths have been rigorously verified as infeasible:
-
-1. Mistaking direct-map region addresses for kernel code segment addresses
-2. Reusing kernel addresses across boots (KASLR changes every boot)
-3. Multiple watchdog observation variants (all cause reboots)
-4. Using specific return values as requeue success indicators (strict error code validation required)
-5. Plain shell reading of SELinux-protected kernel symbol tables
-6. Incorrect waiter offset calculations (cause kernel panic)
-7. Public Linux LPE routes (target kernel config does not meet prerequisites)
+After root, the loader automatically:
+1. Deploys ksud to KernelSU manager directory
+2. Deploys kernelsu .ko to `/data/local/tmp/`
+3. Calls ksud for late-load insmod
+4. Verifies KSU version, module list, network connectivity
 
 ---
 
@@ -132,13 +138,13 @@ The following paths have been rigorously verified as infeasible:
 
 | Stage | Status | Notes |
 |-------|--------|-------|
-| CVE trigger | ✅ Confirmed | Independently reproduced on target device |
-| Stack overlap | ✅ Confirmed | Factory kernel disassembly verified |
-| Address leak (shell domain) | ✅ Confirmed | Same-boot canonical base derived |
-| Address leak (Firefox domain) | ❌ Unavailable | SELinux policy blocks access |
-| Write primitive | ❌ Not established | Multiple routes all have blocking points |
-| Credential modification | 🔨 Build only | No device runtime verification |
-| Full root | ❌ Not achieved | — |
+| CVE trigger | ✅ Confirmed | `CMP_REQUEUE_PI=-1/errno=EDEADLK` |
+| Stack overlap | ✅ Confirmed | `shift=0, nfds=320` factory kernel verified |
+| KASLR leak | ✅ Implemented | Slide route automated bypass |
+| Write primitive | ✅ Implemented | Direct write three-step cred patch |
+| Credential patch | ✅ Implemented | `init_cred` + `selinux_enforcing=0` |
+| KernelSU | ✅ Implemented | v32525 UAPI2 LKM late-load |
+| LSPosed | ✅ Implemented | v2.1.1 API 102 |
 
 ---
 
@@ -146,12 +152,13 @@ The following paths have been rigorously verified as infeasible:
 
 | Category | Details |
 |----------|---------|
-| Target device | Xiaomi Pad 7S Pro (`violin`) |
+| Target devices | Xiaomi Pad 7S Pro (`violin`), Pad 7 Ultra (`jinghu`), 15S Pro (`dijun`) |
 | Firmware | HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`), Android 16 |
-| Kernel | `6.6.77-android15-8`, ARM64 |
-| Browser | Firefox for Android 151.0 |
+| Kernel | `6.6.77-android15-8-g5770c661275f-abogki443185593-4k`, ARM64 |
+| CVE | CVE-2026-43499 (GhostLock / IonStack) |
+| Root method | `LD_PRELOAD` loader SO → kernel privesc → auto KernelSU install |
 | Build tools | Android NDK r29, API 35 |
-| Analysis tools | Offline verifiers (Python), kernel disassembly, BTF parsing, SELinux CIL analysis |
+| Analysis tools | Python offline verifiers, kernel disassembly, BTF parsing, SELinux CIL analysis |
 
 ---
 
@@ -159,13 +166,20 @@ The following paths have been rigorously verified as infeasible:
 
 ```
 ionstack-violin/
-├── index.html                         # Launcher — terminal UI, retry logic
-├── exploit.html                       # CVE trigger + payload loader
-├── diag.html                          # Diagnostic / power-loss recovery
-├── ansi.js                            # ANSI renderer
-├── run-rooted-e24-live-capture.sh     # Kernel log capture script
-├── collect-rooted-panic-evidence.sh   # Post-reboot evidence collector
-└── README_EN.md                       # This file
+├── evidence/                           # Success screenshots and kernel info
+├── exploit-repo/                       # IonStack CVE-2026-43499 exploit source (C/H)
+├── exploit-site/                       # Browser-based exploit pages (HTML/JS)
+├── tools/                              # Python offline audit/verification tools (~50)
+├── violin-injector/                    # Android injector app source
+├── session-20260723-cred-patch/        # In-place cred patch experiment source
+├── ionstack-current-ktext/             # Rooted device kernel symbol dump
+├── index.html                          # Launcher — terminal UI, retry logic
+├── exploit.html                        # CVE trigger + payload loader
+├── diag.html                           # Diagnostic / power-loss recovery
+├── ansi.js                             # ANSI renderer
+├── run-rooted-e24-live-capture.sh      # Kernel log capture script
+├── collect-rooted-panic-evidence.sh    # Post-reboot evidence collector
+└── README_EN.md                        # This file
 ```
 
 ---

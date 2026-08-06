@@ -1,3 +1,0 @@
-* You can now search Sub-settings inside Settings screens
-* Added Palette Styles for color schemes
-* Added option to set app language directly in-app
