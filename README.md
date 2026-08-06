@@ -35,6 +35,11 @@ n## Root 成功证据
 截图显示 `r.so` 运行后 `got_root=1`、`uid=0`、`euid=0`，`/data/local/tmp/root_proof` 文件属主为 `root:root`。
 
 > 完整审计报告见 [evidence/report.md](evidence/report.md)，原始内核信息见 [violin-kernel-info2.zip](evidence/violin-kernel-info2.zip)。
+n## KernelSU Root 成功
+
+![KernelSU Root](evidence/ksu-root-success.png)
+
+KernelSU 管理器显示 `ksud` 和 MT管理器已获得超级用户权限，SELinux 处于宽容模式。设备型号 25053RP5CC，内核 `6.6.77-android15-8`。
 
 ---
 
