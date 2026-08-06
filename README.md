@@ -180,7 +180,6 @@ root 成功后自动：
 ```
 ionstack-violin/
 ├── evidence/                           # 成功证据截图与内核信息
-├── exploit-repo/                       # IonStack CVE-2026-43499 exploit 源码 (C/H)
 ├── exploit-site/                       # 浏览器利用页面 (HTML/JS)
 ├── tools/                              # Python 离线审计/核验工具 (~50 个)
 ├── violin-injector/                    # Android 注入器 app 源码

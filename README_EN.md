@@ -167,7 +167,6 @@ After root, the loader automatically:
 ```
 ionstack-violin/
 ├── evidence/                           # Success screenshots and kernel info
-├── exploit-repo/                       # IonStack CVE-2026-43499 exploit source (C/H)
 ├── exploit-site/                       # Browser-based exploit pages (HTML/JS)
 ├── tools/                              # Python offline audit/verification tools (~50)
 ├── violin-injector/                    # Android injector app source
