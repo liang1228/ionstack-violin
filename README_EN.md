@@ -28,12 +28,6 @@ This project is a full-chain kernel privilege escalation research of **CVE-2026-
 - **Goal:** Evaluate exploit feasibility on authorized test devices, reproduce the attack chain, and use findings to fix product vulnerabilities
 
 **Current status: CVE trigger confirmed, local primitives partially established, but the full in-browser privilege escalation chain is not yet closed.**
-n## KernelSU Root Success
-![KernelSU Root](evidence/ksu-root-success.jpg)
-
-Ring app showing ROOT acquired (enforcement mode), KernelSU Manager v3.2.5 working [jailbreak mode], running in LKM mode, LSPosed activated (API 102). Device: Xiaomi Pad 7S Pro 12.5, kernel `6.6.77-android15-8`, HyperOS 3.0 (`OS3.0.303.0.WOTCNXM`)
-
-KernelSU Manager shows `ksud` and MT Manager granted superuser permission. SELinux in permissive mode. Device model 25053RP5CC, kernel `6.6.77-android15-8`.
 
 ---
 
@@ -147,19 +141,6 @@ The following paths have been rigorously verified as infeasible:
 | Full root | ❌ Not achieved | — |
 
 ---
-
-## Kernel Symbol Reference / ionstack-current-ktext
-
-Full kernel symbol table extracted from a rooted device (Magisk, boot_id `2988e1dc`), used for offline verification of exploit target offsets, struct layouts, and KASLR base address.
-
-| File | Description |
-|------|-------------|
-| `current-ktext.txt` | Collection metadata: root identity, boot_id, KASLR base, key symbol addresses |
-| `kallsyms.txt` | Full `/proc/kallsyms` dump (14MB, 307K+ entries) |
-| `key-symbols.txt` | Canonical addresses of key symbols (`_text`, `ashmem_fops`, `sysctl_bootid`, etc.) |
-| `SHA256SUMS` | File integrity checksums |
-
-> **Purpose:** Verify the 27 offset constants in `target.h` against a live kernel; derive `CFI_KASLR_BASE` for offline builds. Canonical addresses are only valid for that specific boot — do not reuse across reboots.
 
 ## Tech Stack
 
