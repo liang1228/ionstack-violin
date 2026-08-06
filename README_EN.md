@@ -148,6 +148,19 @@ The following paths have been rigorously verified as infeasible:
 
 ---
 
+## Kernel Symbol Reference / ionstack-current-ktext
+
+Full kernel symbol table extracted from a rooted device (Magisk, boot_id `2988e1dc`), used for offline verification of exploit target offsets, struct layouts, and KASLR base address.
+
+| File | Description |
+|------|-------------|
+| `current-ktext.txt` | Collection metadata: root identity, boot_id, KASLR base, key symbol addresses |
+| `kallsyms.txt` | Full `/proc/kallsyms` dump (14MB, 307K+ entries) |
+| `key-symbols.txt` | Canonical addresses of key symbols (`_text`, `ashmem_fops`, `sysctl_bootid`, etc.) |
+| `SHA256SUMS` | File integrity checksums |
+
+> **Purpose:** Verify the 27 offset constants in `target.h` against a live kernel; derive `CFI_KASLR_BASE` for offline builds. Canonical addresses are only valid for that specific boot — do not reuse across reboots.
+
 ## Tech Stack
 
 | Category | Details |

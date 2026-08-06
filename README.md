@@ -148,6 +148,19 @@ CVE-2026-43499 的根因在 Linux 内核 futex 子系统的 `FUTEX_CMP_REQUEUE_P
 
 ---
 
+## 内核符号表参考 / ionstack-current-ktext
+
+从已 root 设备（Magisk，boot_id `2988e1dc`）提取的完整内核符号表，用于离线验证 exploit 的目标偏移、结构体布局和 KASLR 基地址。
+
+| 文件 | 说明 |
+|------|------|
+| `current-ktext.txt` | 提取元数据：root 身份、boot_id、KASLR 基地址、关键符号地址 |
+| `kallsyms.txt` | 完整 `/proc/kallsyms` 转储（14MB，307K+ 条目） |
+| `key-symbols.txt` | 关键符号的 canonical 地址（`_text`、`ashmem_fops`、`sysctl_bootid` 等） |
+| `SHA256SUMS` | 文件完整性校验 |
+
+> **用途：** 验证 `target.h` 中的 27 个偏移常量是否与 live kernel 匹配；推导 `CFI_KASLR_BASE` 用于离线构建。canonical 地址仅对该次 boot 有效，不可跨 boot 复用。
+
 ## 技术栈
 
 | 类别 | 说明 |

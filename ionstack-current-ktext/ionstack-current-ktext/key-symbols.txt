@@ -1,0 +1,10 @@
+ffffffe7ca400000 T _text
+ffffffe7ca410000 T _stext
+ffffffe7cb54a288 d anon_pipe_buf_ops
+ffffffe7cb669710 d misc_fops
+ffffffe7cb6c9df0 d ashmem_fops
+ffffffe7cba4f410 D security_hook_heads
+ffffffe7cc4d21b8 d loggers
+ffffffe7cc4de280 D init_task
+ffffffe7cc6d4580 B root_task_group
+ffffffe7cc736f58 b sysctl_bootid

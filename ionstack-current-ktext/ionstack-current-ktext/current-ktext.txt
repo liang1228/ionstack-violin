@@ -1,0 +1,19 @@
+status=OK
+ts=2026-07-13 20:23:09 +0800
+uid=uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0
+context=u:r:magisk:s0
+outdir=/storage/emulated/0/Download/DLManager/ionstack-current-ktext
+boot_id=2988e1dc-3130-4ba7-9985-74a91a2296cd
+kptr_restrict_before=2
+kptr_restrict_during=0
+kptr_restrict_will_restore=1
+kallsyms_size=14127970
+kallsyms__text=ffffffe7ca400000 T _text
+kallsyms__stext=ffffffe7ca410000 T _stext
+kallsyms_ashmem_fops=ffffffe7cb6c9df0 d ashmem_fops
+kallsyms_sysctl_bootid=ffffffe7cc736f58 b sysctl_bootid
+kallsyms_loggers=ffffffe7cc4d21b8 d loggers
+kallsyms_init_task=ffffffe7cc4de280 D init_task
+kallsyms_root_task_group=ffffffe7cc6d4580 B root_task_group
+CFI_KASLR_BASE=0xffffffe7ca400000
+NOTE=Use this CFI_KASLR_BASE only while boot_id remains exactly 2988e1dc-3130-4ba7-9985-74a91a2296cd.
