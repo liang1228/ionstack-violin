@@ -1,0 +1,40 @@
+{
+  "evidence_image": {
+    "path": "E:\\workspace\\projects\\xiaomi-root\\analysis_outputs\\7sp-local-run-evidence-20260723\\evidence.jpg",
+    "size": 65152,
+    "sha256": "436c1e1e825d1d2507936fa24aab93c616a5101e1040f024881f18bddd618a02"
+  },
+  "zip": {
+    "path": "E:\\ZEOON3\\Downloads\\7sp_permissive和root.zip",
+    "size": 104363,
+    "sha256": "10eaa47050373395454c08c5b287d4055a099ebde271200322f74afd1e83bbd5"
+  },
+  "files": {
+    "p.so": {
+      "size": 83632,
+      "sha256": "edd44e0c17781f0d63935dc1938b81fdcdc981f7221392117effb54e26e6cc81",
+      "image_claim": "getenforce -> Permissive; selinux zero result: enforcing=0",
+      "verdict": "permissive_only"
+    },
+    "r.so": {
+      "size": 86464,
+      "sha256": "ed07f6901eacd13577e77f09a7eebce5609e62b5b602bbefa10d09fdd4ca152e",
+      "image_claim": "got_root=1; uid=0; euid=0; root proof contains root; owner root:root",
+      "verdict": "direct_root_claim"
+    },
+    "r2.so": {
+      "size": 86664,
+      "sha256": "f4ddca29b1b86c6d119ecdf1d10b4337842739479c50e4c2e19d39808631af76",
+      "image_claim": null,
+      "verdict": "no_image_evidence"
+    }
+  },
+  "binding": {
+    "device_fingerprint": false,
+    "boot_id": false,
+    "artifact_hash_in_image": false,
+    "run_id": false,
+    "source_commit": false
+  },
+  "conclusion": "image_supports_one_permissive_run_and_one_root_run_claim; not_reproducibility_or_provenance_proof"
+}
